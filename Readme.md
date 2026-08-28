@@ -120,24 +120,4 @@ frontend/
 - React Router
 - ESLint
 
-### Frontend Pages
-
-- Login
-- Register
-- Dashboard
-- Manage Medicines
-- Set Reminders
-- Prescriptions
-- History & Reports
-- AI Chatbot
-
-### Frontend Components
-
-- Navbar
-- Sidebar
-- Medicine Card
-- Reminder Card
-- Stat Card
-- Modal
-- Protected Route`
 
