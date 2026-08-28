@@ -1,5 +1,5 @@
 ### Backend project tructure 
-```
+  ```
 medreminder-backend/
 ├── package.json
 ├── .env.example
@@ -32,14 +32,11 @@ medreminder-backend/
     │   └── reminderScheduler.js           # node-cron job (matches "Reminder Service" box)
     └── utils/
         └── logger.js 
+ ```
 
-
-
-
----
 
 ### Frontend project structure
-
+```
 frontend/
 ├── public/
 ├── src/
@@ -78,7 +75,7 @@ frontend/
 ├── package.json
 ├── vite.config.ts
 └── ...
-``
+```
 
 ### Frontend Tech Stack
 - React
