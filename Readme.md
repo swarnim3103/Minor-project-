@@ -17,7 +17,7 @@ medreminder-backend/
     │   ├── prescription.routes.js
     │   └── chatbot.routes.js
     ├── controllers/
-    │   ├── auth.controller.js
+    │   ├── auth.controller.js             #authentication controller
     │   ├── medicine.controller.js
     │   └── reminder.controller.js
     ├── services/
@@ -31,5 +31,5 @@ medreminder-backend/
     ├── jobs/
     │   └── reminderScheduler.js           # node-cron job (matches "Reminder Service" box)
     └── utils/
-        └── logger.js
+        └── logger.js 
 ```
