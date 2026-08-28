@@ -32,4 +32,78 @@ medreminder-backend/
     │   └── reminderScheduler.js           # node-cron job (matches "Reminder Service" box)
     └── utils/
         └── logger.js 
-```
+
+
+
+
+---
+
+### Frontend project structure
+
+frontend/
+├── public/
+├── src/
+│   ├── assets/
+│   │
+│   ├── components/
+│   │   ├── MedicineCard.tsx
+│   │   ├── Modal.tsx
+│   │   ├── Navbar.tsx
+│   │   ├── ProtectedRoute.tsx
+│   │   ├── ReminderCard.tsx
+│   │   ├── Sidebar.tsx
+│   │   └── StatCard.tsx
+│   │
+│   ├── context/
+│   │
+│   ├── hooks/
+│   │
+│   ├── pages/
+│   │   ├── Chatbot.tsx
+│   │   ├── Dashboard.tsx
+│   │   ├── History.tsx
+│   │   ├── Login.tsx
+│   │   ├── Medicines.tsx
+│   │   ├── Prescriptions.tsx
+│   │   ├── Register.tsx
+│   │   └── Reminders.tsx
+│   │
+│   ├── services/
+│   │
+│   ├── App.tsx
+│   ├── App.css
+│   ├── index.css
+│   └── main.tsx
+│
+├── package.json
+├── vite.config.ts
+└── ...
+``
+
+### Frontend Tech Stack
+- React
+- TypeScript
+- Vite
+- React Router
+- ESLint
+
+### Frontend Pages
+
+- Login
+- Register
+- Dashboard
+- Manage Medicines
+- Set Reminders
+- Prescriptions
+- History & Reports
+- AI Chatbot
+
+### Frontend Components
+
+- Navbar
+- Sidebar
+- Medicine Card
+- Reminder Card
+- Stat Card
+- Modal
+- Protected Route`
