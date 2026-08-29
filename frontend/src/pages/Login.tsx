@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { loginUser } from "../services/authService";
 import "./Login.css";
 
 function Login() {
@@ -12,7 +13,7 @@ function Login() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     setError("");
@@ -22,18 +23,29 @@ function Login() {
       return;
     }
 
-    setLoading(true);
+    try {
+      setLoading(true);
 
-    // Temporary authentication for prototype
-    setTimeout(() => {
-      if (email === "test@gmail.com" && password === "123456") {
-        navigate("/dashboard");
+      // Send email and password to backend
+      const data = await loginUser(email, password);
+
+      // Save JWT token
+      localStorage.setItem("token", data.token);
+
+      // Save logged-in user information
+      localStorage.setItem("user", JSON.stringify(data.user));
+
+      // Redirect after successful login
+      navigate("/dashboard");
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
       } else {
-        setError("Invalid email or password.");
+        setError("Something went wrong during login.");
       }
-
+    } finally {
       setLoading(false);
-    }, 800);
+    }
   };
 
   return (
@@ -99,6 +111,7 @@ function Login() {
                   placeholder="Enter your email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
                 />
               </div>
 
@@ -122,12 +135,14 @@ function Login() {
                     placeholder="Enter your password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    disabled={loading}
                   />
 
                   <button
                     type="button"
                     className="show-password"
                     onClick={() => setShowPassword(!showPassword)}
+                    disabled={loading}
                   >
                     {showPassword ? "Hide" : "Show"}
                   </button>
