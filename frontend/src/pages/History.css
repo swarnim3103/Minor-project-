@@ -1,0 +1,103 @@
+.history-chart-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  padding: 20px;
+  margin-bottom: 24px;
+}
+
+.history-chart-card h3,
+.history-log h3 {
+  margin: 0 0 16px;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.history-chart {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  height: 140px;
+}
+
+.history-bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+}
+
+.history-bar-track {
+  flex: 1;
+  width: 100%;
+  max-width: 32px;
+  background: var(--color-bg);
+  border-radius: 6px;
+  display: flex;
+  align-items: flex-end;
+  overflow: hidden;
+}
+
+.history-bar-fill {
+  width: 100%;
+  background: var(--color-primary);
+  border-radius: 6px 6px 0 0;
+  min-height: 4px;
+}
+
+.history-bar-col span {
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+}
+
+.history-log-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+}
+
+.history-log-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.history-log-icon-ok {
+  background: var(--color-success-bg);
+  color: var(--color-success);
+}
+
+.history-log-icon-missed {
+  background: var(--color-danger-bg);
+  color: var(--color-danger);
+}
+
+.history-log-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.history-log-medicine {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.history-log-meta {
+  font-size: 11.5px;
+  color: var(--color-text-muted);
+}

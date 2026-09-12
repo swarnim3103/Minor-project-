@@ -2,10 +2,12 @@ import { useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { loginUser } from "../services/authService";
+import { useAuth } from "../context/AuthContext";
 import "./Login.css";
 
 function Login() {
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -26,16 +28,12 @@ function Login() {
     try {
       setLoading(true);
 
-      // Send email and password to backend
       const data = await loginUser(email, password);
 
-      // Save JWT token
-      localStorage.setItem("token", data.token);
+      // Save auth state through context, so ProtectedRoute picks it up
+      // immediately without needing a page reload.
+      login(data.token, data.user);
 
-      // Save logged-in user information
-      localStorage.setItem("user", JSON.stringify(data.user));
-
-      // Redirect after successful login
       navigate("/dashboard");
     } catch (err) {
       if (err instanceof Error) {
@@ -50,136 +48,212 @@ function Login() {
 
   return (
     <div className="login-page">
-      <div className="login-container">
 
-        {/* Left Section */}
-        <div className="login-info">
-          <div className="brand">
-            <div className="brand-icon">+</div>
-            <span>MedCare</span>
+      {/* ================= LEFT SIDE ================= */}
+      <section className="login-left">
+
+        {/* Brand */}
+        <div className="brand">
+          <div className="brand-icon">
+            +
           </div>
 
-          <div className="login-info-content">
-            <h1>
-              Your health,
-              <br />
-              <span>our priority.</span>
-            </h1>
+          <span>MedCare</span>
+        </div>
+
+        {/* Illustration */}
+        <div className="illustration-container">
+          <img
+            src="/medication-login.png"
+            alt="Medication and healthcare illustration"
+            className="login-illustration"
+          />
+        </div>
+
+        {/* Text */}
+        <div className="left-content">
+          <h1>
+            Your health,
+            <br />
+            <span>our priority.</span>
+          </h1>
+
+          <p>
+            Manage your medicines, prescriptions and reminders
+            <br />
+            all in one place.
+          </p>
+
+          <div className="feature-list">
+
+            <div className="feature-item">
+              <span className="check-icon">✓</span>
+              <span>Never miss a medication</span>
+            </div>
+
+            <div className="feature-item">
+              <span className="check-icon">✓</span>
+              <span>Track your medication history</span>
+            </div>
+
+            <div className="feature-item">
+              <span className="check-icon">✓</span>
+              <span>Get personalized health assistance</span>
+            </div>
+
+          </div>
+        </div>
+
+      </section>
+
+
+      {/* ================= RIGHT SIDE ================= */}
+      <section className="login-right">
+
+        <div className="login-form-container">
+
+          {/* Heading */}
+          <div className="form-heading">
+            <h2>Welcome Back!</h2>
 
             <p>
-              Manage your medicines, prescriptions and reminders
-              all in one place.
+              Don't have an account yet?{" "}
+              <Link to="/register">
+                Sign Up
+              </Link>
             </p>
-
-            <div className="feature-list">
-              <div className="feature-item">
-                <span>✓</span>
-                <p>Never miss a medication</p>
-              </div>
-
-              <div className="feature-item">
-                <span>✓</span>
-                <p>Track your medication history</p>
-              </div>
-
-              <div className="feature-item">
-                <span>✓</span>
-                <p>Get personalized health assistance</p>
-              </div>
-            </div>
           </div>
-        </div>
 
-        {/* Right Section */}
-        <div className="login-form-section">
-          <div className="login-form-container">
 
-            <div className="form-heading">
-              <h2>Welcome back</h2>
-              <p>Sign in to continue to your account</p>
+          {/* Form */}
+          <form onSubmit={handleSubmit}>
+
+            {/* Email */}
+            <div className="input-group">
+
+              <label htmlFor="email">
+                Email Address
+              </label>
+
+              <input
+                id="email"
+                type="email"
+                placeholder="Enter your email"
+                value={email}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  setError("");
+                }}
+                disabled={loading}
+                autoComplete="email"
+              />
+
             </div>
 
-            <form onSubmit={handleSubmit}>
 
-              {/* Email */}
-              <div className="input-group">
-                <label htmlFor="email">Email Address</label>
+            {/* Password */}
+            <div className="input-group">
+
+              <div className="password-label">
+
+                <label htmlFor="password">
+                  Password
+                </label>
+
+                <button
+                  type="button"
+                  className="forgot-password"
+                  onClick={() => {
+                    // Forgot password functionality can be added later
+                  }}
+                >
+                  Forgot Password?
+                </button>
+
+              </div>
+
+
+              <div className="password-input">
 
                 <input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setError("");
+                  }}
+                  disabled={loading}
+                  autoComplete="current-password"
+                />
+
+                <button
+                  type="button"
+                  className="show-password"
+                  onClick={() => setShowPassword(!showPassword)}
+                  disabled={loading}
+                  aria-label={
+                    showPassword
+                      ? "Hide password"
+                      : "Show password"
+                  }
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+
+              </div>
+
+            </div>
+
+
+            {/* Remember me */}
+            <div className="login-options">
+
+              <label className="remember-me">
+
+                <input
+                  type="checkbox"
                   disabled={loading}
                 />
-              </div>
 
-              {/* Password */}
-              <div className="input-group">
-                <div className="password-label">
-                  <label htmlFor="password">Password</label>
+                <span>Keep me logged in</span>
 
-                  <button
-                    type="button"
-                    className="forgot-password"
-                  >
-                    Forgot password?
-                  </button>
-                </div>
+              </label>
 
-                <div className="password-input">
-                  <input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    disabled={loading}
-                  />
-
-                  <button
-                    type="button"
-                    className="show-password"
-                    onClick={() => setShowPassword(!showPassword)}
-                    disabled={loading}
-                  >
-                    {showPassword ? "Hide" : "Show"}
-                  </button>
-                </div>
-              </div>
-
-              {/* Error */}
-              {error && (
-                <div className="login-error">
-                  {error}
-                </div>
-              )}
-
-              {/* Login button */}
-              <button
-                type="submit"
-                className="login-button"
-                disabled={loading}
-              >
-                {loading ? "Signing in..." : "Sign In"}
-              </button>
-
-            </form>
-
-            <div className="register-link">
-              Don't have an account?{" "}
-              <Link to="/register">Create an account</Link>
             </div>
 
-            <div className="security-note">
-              🔒 Your information is securely protected
-            </div>
 
+            {/* Error */}
+            {error && (
+              <div className="login-error">
+                {error}
+              </div>
+            )}
+
+
+            {/* Login Button */}
+            <button
+              type="submit"
+              className="login-button"
+              disabled={loading}
+            >
+              {loading ? "Signing in..." : "Login"}
+            </button>
+
+          </form>
+
+
+          {/* Security message */}
+          <div className="security-note">
+            <span>🔒</span>
+            <span>Your information is securely protected</span>
           </div>
+
         </div>
 
-      </div>
+      </section>
+
     </div>
   );
 }

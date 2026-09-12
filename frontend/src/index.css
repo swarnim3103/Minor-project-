@@ -1,3 +1,31 @@
+:root {
+  /* Brand palette — extends the Login page's blue/navy identity */
+  --color-primary: #4169b5;
+  --color-primary-dark: #263b63;
+  --color-primary-mid: #5276c2;
+  --color-primary-soft: #5274bd;
+  --color-accent-bg: #e7eefc;
+
+  --color-bg: #f5f7fb;
+  --color-surface: #ffffff;
+  --color-border: #e2e6ee;
+
+  --color-text: #263b63;
+  --color-text-muted: #697891;
+  --color-text-soft: #53647e;
+
+  --color-success: #2f9e6f;
+  --color-success-bg: #e5f7ef;
+  --color-warning: #d98c3f;
+  --color-warning-bg: #fbf0e2;
+  --color-danger: #d15757;
+  --color-danger-bg: #fbe9e9;
+
+  --shadow-card: 0 1px 2px rgba(38, 59, 99, 0.06), 0 1px 8px rgba(38, 59, 99, 0.05);
+  --radius-md: 10px;
+  --radius-lg: 14px;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -10,5 +38,11 @@ body,
 }
 
 body {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: var(--color-bg);
+  color: var(--color-text);
+}
+
+button, input, select, textarea {
+  font-family: inherit;
 }
