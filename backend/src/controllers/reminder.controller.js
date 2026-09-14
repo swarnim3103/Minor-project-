@@ -60,7 +60,7 @@ async function getMyReminders(req, res) {
     const userId = req.user.id;
 
     const [rows] = await pool.query(
-      `SELECT r.*, m.name AS medicine_name
+      `SELECT r.*, m.name AS medicine_name, m.dosage AS dosage
        FROM reminders r
        JOIN medicines m ON m.id = r.medicine_id
        WHERE r.user_id = ?
@@ -73,7 +73,7 @@ async function getMyReminders(req, res) {
     console.error('[reminder.getMy] error:', err);
     return res.status(500).json({ error: 'Something went wrong fetching reminders' });
   }
-}
+}9
 
 /**
  * PATCH /api/reminders/:id

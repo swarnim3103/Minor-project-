@@ -64,21 +64,21 @@ function Reminders() {
     }
   }
 
-  async function loadMedicines() {
-    try {
-      const res = await fetch(`${API_BASE}/medicines`, {
-        headers: getAuthHeaders(),
-      });
-      if (!res.ok) throw new Error("Failed to load medicines");
-      const data = await res.json();
-      setMedicines(data.medicines || []);
-      if (data.medicines?.length > 0) {
-        setMedicineId(data.medicines[0].id);
-      }
-    } catch (err) {
-      console.error(err);
+async function loadMedicines() {
+  try {
+    const res = await fetch(`${API_BASE}/medicines`, {
+      headers: getAuthHeaders(),
+    });
+    if (!res.ok) throw new Error("Failed to load medicines");
+    const data = await res.json(); // this is a raw array, not { medicines: [...] }
+    setMedicines(data || []);
+    if (data?.length > 0) {
+      setMedicineId(data[0].id);
     }
+  } catch (err) {
+    console.error(err);
   }
+}
 
   async function toggleReminder(id: number) {
     const target = reminders.find((r) => r.id === id);
