@@ -1,41 +1,146 @@
-import { useState, type FormEvent } from "react";
+import { useState, useEffect, type FormEvent } from "react";
 import ReminderCard, { type Reminder } from "../components/ReminderCard";
 import Modal from "../components/Modal";
 import { PlusIcon, BellIcon } from "../components/icons";
 import "../styles/shared.css";
 
-// TODO: wire to GET/POST /api/reminders + the medicine list from /api/medicines
-const medicineOptions = ["Metformin", "Atorvastatin", "Vitamin D3"];
+const API_BASE = "http://localhost:5000/api";
 
-const initialReminders: Reminder[] = [
-  { id: 1, medicine_name: "Metformin", reminder_time: "08:00", status: "active", dosage: "500mg after breakfast" },
-  { id: 2, medicine_name: "Atorvastatin", reminder_time: "13:00", status: "active", dosage: "10mg after lunch" },
-  { id: 3, medicine_name: "Vitamin D3", reminder_time: "21:00", status: "inactive", dosage: "1 tablet before bed" },
-];
+type Medicine = {
+  id: number;
+  name: string;
+};
+
+function getAuthHeaders() {
+  const token = localStorage.getItem("token");
+  return {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
+}
 
 function Reminders() {
-  const [reminders, setReminders] = useState<Reminder[]>(initialReminders);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [medicine, setMedicine] = useState(medicineOptions[0]);
-  const [time, setTime] = useState("08:00");
+  const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [medicines, setMedicines] = useState<Medicine[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  function toggleReminder(id: number) {
-    setReminders((prev) =>
-      prev.map((r) =>
-        r.id === id
-          ? { ...r, status: r.status === "active" ? "inactive" : "active" }
-          : r
-      )
-    );
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [medicineId, setMedicineId] = useState<number | null>(null);
+  const [time, setTime] = useState("08:00");
+  const [startDate, setStartDate] = useState(new Date().toISOString().slice(0, 10));
+  const [endDate, setEndDate] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    loadReminders();
+    loadMedicines();
+  }, []);
+
+  async function loadReminders() {
+    try {
+      setLoading(true);
+      const res = await fetch(`${API_BASE}/reminders`, {
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to load reminders");
+      const data = await res.json();
+
+      const mapped: Reminder[] = data.reminders.map((r: any) => ({
+        id: r.id,
+        medicine_name: r.medicine_name,
+        reminder_time: r.reminder_time.slice(0, 5), // "14:35:00" -> "14:35"
+        status: r.status,
+        dosage: r.dosage || "",
+      }));
+
+      setReminders(mapped);
+      setError(null);
+    } catch (err) {
+      console.error(err);
+      setError("Could not load reminders. Is the backend running?");
+    } finally {
+      setLoading(false);
+    }
   }
 
-  function handleSubmit(e: FormEvent) {
+  async function loadMedicines() {
+    try {
+      const res = await fetch(`${API_BASE}/medicines`, {
+        headers: getAuthHeaders(),
+      });
+      if (!res.ok) throw new Error("Failed to load medicines");
+      const data = await res.json();
+      setMedicines(data.medicines || []);
+      if (data.medicines?.length > 0) {
+        setMedicineId(data.medicines[0].id);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function toggleReminder(id: number) {
+    const target = reminders.find((r) => r.id === id);
+    if (!target) return;
+
+    const newStatus = target.status === "active" ? "inactive" : "active";
+
+    // optimistic UI update
+    setReminders((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, status: newStatus } : r))
+    );
+
+    try {
+      const res = await fetch(`${API_BASE}/reminders/${id}`, {
+        method: "PATCH",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) throw new Error("Failed to update reminder");
+    } catch (err) {
+      console.error(err);
+      // revert on failure
+      setReminders((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, status: target.status } : r))
+      );
+    }
+  }
+
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setReminders((prev) => [
-      ...prev,
-      { id: Date.now(), medicine_name: medicine, reminder_time: time, status: "active" },
-    ]);
-    setIsModalOpen(false);
+    if (!medicineId) {
+      setError("Please select a medicine.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const res = await fetch(`${API_BASE}/reminders`, {
+        method: "POST",
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          medicine_id: medicineId,
+          reminder_time: `${time}:00`, // "08:00" -> "08:00:00"
+          start_date: startDate,
+          end_date: endDate || "2099-12-31", // open-ended if not specified
+        }),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.error || "Failed to create reminder");
+      }
+
+      await loadReminders(); // refresh list from server
+      setIsModalOpen(false);
+      setError(null);
+    } catch (err: any) {
+      console.error(err);
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   const sorted = [...reminders].sort((a, b) =>
@@ -55,7 +160,11 @@ function Reminders() {
         </button>
       </div>
 
-      {sorted.length === 0 ? (
+      {error && <div className="error-banner">{error}</div>}
+
+      {loading ? (
+        <p>Loading reminders...</p>
+      ) : sorted.length === 0 ? (
         <div className="empty-state">
           <BellIcon width={32} height={32} />
           <h3>No reminders set</h3>
@@ -76,14 +185,18 @@ function Reminders() {
               <label htmlFor="rem-medicine">Medicine</label>
               <select
                 id="rem-medicine"
-                value={medicine}
-                onChange={(e) => setMedicine(e.target.value)}
+                value={medicineId ?? ""}
+                onChange={(e) => setMedicineId(Number(e.target.value))}
               >
-                {medicineOptions.map((m) => (
-                  <option key={m} value={m}>
-                    {m}
-                  </option>
-                ))}
+                {medicines.length === 0 ? (
+                  <option value="">No medicines found - add one first</option>
+                ) : (
+                  medicines.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name}
+                    </option>
+                  ))
+                )}
               </select>
             </div>
 
@@ -97,14 +210,35 @@ function Reminders() {
                 required
               />
             </div>
+
+            <div className="form-field">
+              <label htmlFor="rem-start">Start date</label>
+              <input
+                id="rem-start"
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="form-field">
+              <label htmlFor="rem-end">End date (optional)</label>
+              <input
+                id="rem-end"
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
           </form>
 
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
             <button className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>
               Cancel
             </button>
-            <button className="btn btn-primary" type="submit" form="reminder-form">
-              Add Reminder
+            <button className="btn btn-primary" type="submit" form="reminder-form" disabled={submitting}>
+              {submitting ? "Adding..." : "Add Reminder"}
             </button>
           </div>
         </Modal>
