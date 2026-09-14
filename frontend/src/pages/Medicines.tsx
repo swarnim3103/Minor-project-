@@ -1,8 +1,9 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import MedicineCard, { type Medicine } from "../components/MedicineCard";
 import Modal from "../components/Modal";
 import { PlusIcon, PillIcon } from "../components/icons";
 import "../styles/shared.css";
+import { addMedicine ,getMedicines } from "../services/authService";
 
 // TODO: replace mock state with GET/POST/PUT/DELETE calls to
 // /api/medicines once the backend medicine routes exist.
@@ -47,7 +48,18 @@ function Medicines() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [form, setForm] = useState(emptyForm);
+useEffect(() => {
+  const fetchMedicines = async () => {
+    try {
+      const data = await getMedicines();
+      setMedicines(data);
+    } catch (error) {
+      console.error("Failed to fetch medicines:", error);
+    }
+  };
 
+  fetchMedicines();
+}, []);
   function openAddModal() {
     setEditingId(null);
     setForm(emptyForm);
@@ -71,22 +83,45 @@ function Medicines() {
     setMedicines((prev) => prev.filter((m) => m.id !== id));
   }
 
-  function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    if (!form.name || !form.dosage || !form.frequency || !form.start_date) return;
+  async function handleSubmit(e: FormEvent) {
+  e.preventDefault();
 
+  if (!form.name || !form.dosage || !form.frequency || !form.start_date) {
+    return;
+  }
+
+  try {
     if (editingId !== null) {
+      // Edit functionality baad mein API se connect karenge
       setMedicines((prev) =>
         prev.map((m) => (m.id === editingId ? { ...m, ...form } : m))
       );
     } else {
+      await addMedicine({
+        name: form.name,
+        dosage: form.dosage,
+        frequency: form.frequency,
+        instructions: form.instructions,
+        start_date: form.start_date,
+        end_date: form.end_date || undefined,
+      });
+
+      // Add successful hone ke baad local UI update
       setMedicines((prev) => [
         ...prev,
-        { id: Date.now(), ...form },
+        {
+          id: Date.now(),
+          ...form,
+        },
       ]);
     }
+
     setIsModalOpen(false);
+  } catch (error) {
+    console.error("Failed to add medicine:", error);
+    alert("Failed to add medicine");
   }
+}
 
   return (
     <div>

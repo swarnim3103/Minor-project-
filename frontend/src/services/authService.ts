@@ -104,3 +104,58 @@ export async function getDashboard(): Promise<DashboardData> {
 
   return data;
 }
+export async function addMedicine(medicine: {
+  name: string;
+  dosage: string;
+  frequency: string;
+  instructions?: string;
+  start_date: string;
+  end_date?: string;
+}) {
+  const token = localStorage.getItem("token");
+
+  const response = await fetch(`${API_URL}/medicines`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(medicine),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to add medicine");
+  }
+
+  return data;
+}
+export async function getMedicines(): Promise<
+  {
+    id: number;
+    name: string;
+    dosage: string;
+    frequency: string;
+    instructions?: string;
+    start_date: string;
+    end_date?: string;
+  }[]
+> {
+  const token = localStorage.getItem("token");
+
+  const response = await fetch(`${API_URL}/medicines`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to fetch medicines");
+  }
+
+  return data;
+}
