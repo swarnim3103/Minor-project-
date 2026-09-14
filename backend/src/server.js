@@ -6,6 +6,7 @@ const authRoutes = require('./routes/auth.routes');
 const dashboardRoutes = require('./routes/dashboard.routes');
 const medicineRoutes = require("./routes/medicine.routes");
 const pool = require('./config/db');
+const reminderRoutes = require('./routes/reminder.routes');
 const app = express();
 const { startReminderScheduler } = require('./jobs/reminderScheduler');
 app.use(cors());
@@ -14,6 +15,7 @@ app.use('/api', testCallRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use("/api/medicines", medicineRoutes);
+app.use('/api/reminders', reminderRoutes);
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   startReminderScheduler();
