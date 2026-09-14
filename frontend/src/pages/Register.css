@@ -1,8 +1,8 @@
 /* =========================================
-   LOGIN PAGE
+   REGISTER PAGE
 ========================================= */
 
-.login-page {
+.register-page {
   width: 100%;
   min-height: 100vh;
   min-height: 100dvh;
@@ -30,10 +30,10 @@
 
 
 /* =========================================
-   MEDICAL GRID BACKGROUND
+   BACKGROUND GRID
 ========================================= */
 
-.login-page::before {
+.register-page::before {
   content: "";
 
   position: absolute;
@@ -57,7 +57,7 @@
    AMBIENT GLOWS
 ========================================= */
 
-.ambient-glow {
+.register-ambient-glow {
   position: absolute;
 
   width: 380px;
@@ -69,46 +69,46 @@
 
   pointer-events: none;
 
-  opacity: 0.55;
+  opacity: 0.5;
 
-  animation: pulseGlow 4s ease-in-out infinite;
+  animation: registerGlow 4s ease-in-out infinite;
 
   z-index: 0;
 }
 
-.ambient-glow-one {
+.register-glow-one {
   top: 20%;
   left: 18%;
 
-  background: rgba(54, 169, 247, 0.10);
+  background: rgba(54, 169, 247, 0.1);
 }
 
-.ambient-glow-two {
-  bottom: 18%;
+.register-glow-two {
   right: 18%;
+  bottom: 18%;
 
-  background: rgba(45, 212, 191, 0.10);
+  background: rgba(45, 212, 191, 0.1);
 
   animation-delay: 1.5s;
 }
 
-@keyframes pulseGlow {
+@keyframes registerGlow {
   0%,
   100% {
-    opacity: 0.35;
+    opacity: 0.3;
   }
 
   50% {
-    opacity: 0.65;
+    opacity: 0.6;
   }
 }
 
 
 /* =========================================
-   TOP HEADER
+   HEADER
 ========================================= */
 
-.login-header {
+.register-header {
   width: 100%;
   max-width: 1280px;
 
@@ -126,21 +126,21 @@
   z-index: 10;
 }
 
-.login-brand {
+.register-brand {
   display: flex;
   align-items: center;
 
   gap: 12px;
 
+  color: #075985;
+
   font-size: 26px;
   font-weight: 750;
 
   letter-spacing: -0.7px;
-
-  color: #075985;
 }
 
-.login-brand-icon {
+.register-brand-icon {
   width: 42px;
   height: 42px;
 
@@ -162,7 +162,7 @@
     0 8px 20px rgba(12, 141, 233, 0.22);
 }
 
-.login-brand-icon svg {
+.register-brand-icon svg {
   width: 25px;
   height: 25px;
 
@@ -174,7 +174,7 @@
    MAIN
 ========================================= */
 
-.login-main {
+.register-main {
   width: 100%;
 
   flex: 1;
@@ -194,14 +194,14 @@
 
 
 /* =========================================
-   MAIN CARD
+   CARD
 ========================================= */
 
-.login-card {
+.register-card {
   width: 100%;
   max-width: 1180px;
 
-  min-height: 620px;
+  min-height: 650px;
 
   display: grid;
 
@@ -211,12 +211,12 @@
 
   border-radius: 28px;
 
-  background: rgba(255, 255, 255, 0.88);
+  background: rgba(255, 255, 255, 0.9);
 
   border: 1px solid rgba(226, 232, 240, 0.9);
 
   box-shadow:
-    0 25px 70px rgba(15, 23, 42, 0.10),
+    0 25px 70px rgba(15, 23, 42, 0.1),
     0 8px 25px rgba(15, 23, 42, 0.05);
 
   backdrop-filter: blur(18px);
@@ -227,12 +227,12 @@
    LEFT SHOWCASE
 ========================================= */
 
-.login-showcase {
+.register-showcase {
   min-width: 0;
 
   box-sizing: border-box;
 
-  padding: 54px 58px 28px;
+  padding: 50px 58px 28px;
 
   display: flex;
   flex-direction: column;
@@ -257,7 +257,7 @@
    SHOWCASE CONTENT
 ========================================= */
 
-.showcase-content {
+.register-showcase-content {
   max-width: 540px;
 
   position: relative;
@@ -270,7 +270,7 @@
    BADGE
 ========================================= */
 
-.showcase-badge {
+.register-showcase-badge {
   width: fit-content;
 
   display: inline-flex;
@@ -280,7 +280,7 @@
 
   padding: 7px 13px;
 
-  margin-bottom: 20px;
+  margin-bottom: 18px;
 
   border-radius: 999px;
 
@@ -298,7 +298,7 @@
   text-transform: uppercase;
 }
 
-.badge-dot {
+.register-badge-dot {
   width: 7px;
   height: 7px;
 
@@ -306,12 +306,13 @@
 
   background: #0c8de9;
 
-  box-shadow: 0 0 0 4px rgba(12, 141, 233, 0.10);
+  box-shadow:
+    0 0 0 4px rgba(12, 141, 233, 0.1);
 
-  animation: badgePulse 2s ease-in-out infinite;
+  animation: registerBadgePulse 2s ease-in-out infinite;
 }
 
-@keyframes badgePulse {
+@keyframes registerBadgePulse {
   0%,
   100% {
     transform: scale(1);
@@ -324,24 +325,24 @@
 
 
 /* =========================================
-   SHOWCASE HEADING
+   HEADING
 ========================================= */
 
-.showcase-content h1 {
-  margin: 0 0 18px;
+.register-showcase-content h1 {
+  margin: 0 0 16px;
 
-  font-size: clamp(40px, 4.3vw, 58px);
+  font-size: clamp(38px, 4vw, 54px);
 
   line-height: 1.08;
 
   font-weight: 800;
 
-  letter-spacing: -2.5px;
+  letter-spacing: -2.3px;
 
   color: #0f172a;
 }
 
-.showcase-content h1 span {
+.register-showcase-content h1 span {
   background: linear-gradient(
     90deg,
     #026fc7,
@@ -356,16 +357,20 @@
 }
 
 
-.showcase-description {
+/* =========================================
+   DESCRIPTION
+========================================= */
+
+.register-showcase-description {
   max-width: 500px;
 
-  margin: 0 0 26px;
+  margin: 0 0 23px;
 
   color: #64748b;
 
-  font-size: 15px;
+  font-size: 14px;
 
-  line-height: 1.7;
+  line-height: 1.65;
 }
 
 
@@ -373,28 +378,28 @@
    FEATURES
 ========================================= */
 
-.feature-list {
+.register-feature-list {
   display: flex;
   flex-direction: column;
 
-  gap: 12px;
+  gap: 11px;
 }
 
-.feature-item {
+.register-feature-item {
   display: flex;
   align-items: center;
 
-  gap: 11px;
+  gap: 10px;
 
   color: #475569;
 
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 550;
 }
 
-.feature-check {
-  width: 24px;
-  height: 24px;
+.register-feature-check {
+  width: 23px;
+  height: 23px;
 
   flex-shrink: 0;
 
@@ -408,7 +413,7 @@
 
   color: #0f9f84;
 
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 800;
 }
 
@@ -417,12 +422,12 @@
    MEDICAL VISUAL
 ========================================= */
 
-.medical-visual {
+.register-medical-visual {
   width: 100%;
 
-  height: 230px;
+  height: 210px;
 
-  margin-top: 18px;
+  margin-top: 15px;
 
   position: relative;
 
@@ -433,15 +438,15 @@
 
 
 /* =========================================
-   MAIN MEDICINE CARD
+   MAIN MEDICATION CARD
 ========================================= */
 
-.medicine-card {
+.register-medicine-card {
   width: 290px;
 
   box-sizing: border-box;
 
-  padding: 18px;
+  padding: 17px;
 
   border-radius: 17px;
 
@@ -450,7 +455,7 @@
   border: 1px solid #e8eef5;
 
   box-shadow:
-    0 16px 35px rgba(15, 23, 42, 0.10);
+    0 16px 35px rgba(15, 23, 42, 0.1);
 
   position: relative;
 
@@ -461,7 +466,7 @@
     box-shadow 0.3s ease;
 }
 
-.medicine-card:hover {
+.register-medicine-card:hover {
   transform: translateY(-4px) scale(1.02);
 
   box-shadow:
@@ -473,21 +478,21 @@
    MEDICINE CARD TOP
 ========================================= */
 
-.medicine-card-top {
+.register-medicine-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
 
   gap: 10px;
 
-  padding-bottom: 13px;
+  padding-bottom: 12px;
 
-  margin-bottom: 13px;
+  margin-bottom: 12px;
 
   border-bottom: 1px solid #edf2f7;
 }
 
-.medicine-info {
+.register-medicine-info {
   min-width: 0;
 
   display: flex;
@@ -496,7 +501,7 @@
   gap: 10px;
 }
 
-.medicine-icon {
+.register-medicine-icon {
   width: 34px;
   height: 34px;
 
@@ -513,23 +518,23 @@
   color: #0878c8;
 }
 
-.medicine-icon svg {
+.register-medicine-icon svg {
   width: 19px;
   height: 19px;
 
   fill: currentColor;
 }
 
-.medicine-info h3 {
+.register-medicine-info h3 {
   margin: 0 0 3px;
+
+  color: #1e293b;
 
   font-size: 11px;
   font-weight: 750;
-
-  color: #1e293b;
 }
 
-.medicine-info p {
+.register-medicine-info p {
   margin: 0;
 
   color: #94a3b8;
@@ -537,7 +542,7 @@
   font-size: 9px;
 }
 
-.medicine-time {
+.register-medicine-time {
   flex-shrink: 0;
 
   padding: 5px 7px;
@@ -556,15 +561,13 @@
 
 
 /* =========================================
-   DOSE PROGRESS
+   PROGRESS
 ========================================= */
 
-.dose-progress-label {
+.register-dose-label {
   display: flex;
   align-items: center;
   justify-content: space-between;
-
-  gap: 10px;
 
   margin-bottom: 7px;
 
@@ -573,13 +576,13 @@
   font-size: 10px;
 }
 
-.dose-progress-label strong {
+.register-dose-label strong {
   color: #0878c8;
 
   font-weight: 750;
 }
 
-.progress-track {
+.register-progress-track {
   width: 100%;
   height: 7px;
 
@@ -590,8 +593,9 @@
   background: #edf2f7;
 }
 
-.progress-fill {
-  width: 66.66%;
+.register-progress-fill {
+  width: 66%;
+
   height: 100%;
 
   border-radius: inherit;
@@ -608,13 +612,13 @@
    FLOATING CARDS
 ========================================= */
 
-.floating-card {
+.register-floating-card {
   position: absolute;
 
   display: flex;
   align-items: center;
 
-  gap: 10px;
+  gap: 9px;
 
   padding: 10px 12px;
 
@@ -625,53 +629,55 @@
   border: 1px solid #e8eef5;
 
   box-shadow:
-    0 12px 28px rgba(15, 23, 42, 0.10);
+    0 12px 28px rgba(15, 23, 42, 0.1);
 
   z-index: 10;
 }
 
-.heart-card {
+.register-health-card {
   top: 0;
   left: 3%;
 
-  animation: floatSlow 6s ease-in-out infinite;
+  animation:
+    registerFloatOne 6s ease-in-out infinite;
 }
 
-.streak-card {
+.register-streak-card {
   right: 3%;
   bottom: 0;
 
-  animation: floatDelayed 6s ease-in-out 3s infinite;
+  animation:
+    registerFloatTwo 6s ease-in-out 3s infinite;
 }
 
-@keyframes floatSlow {
+@keyframes registerFloatOne {
   0%,
   100% {
     transform: translateY(0);
   }
 
   50% {
-    transform: translateY(-9px);
+    transform: translateY(-8px);
   }
 }
 
-@keyframes floatDelayed {
+@keyframes registerFloatTwo {
   0%,
   100% {
     transform: translateY(0);
   }
 
   50% {
-    transform: translateY(-9px);
+    transform: translateY(-8px);
   }
 }
 
 
 /* =========================================
-   FLOATING CARD ICON
+   FLOATING ICONS
 ========================================= */
 
-.floating-icon {
+.register-floating-icon {
   width: 34px;
   height: 34px;
 
@@ -684,20 +690,20 @@
   border-radius: 9px;
 }
 
-.floating-icon svg {
+.register-floating-icon svg {
   width: 18px;
   height: 18px;
 
   fill: currentColor;
 }
 
-.heart-icon {
+.register-heart-icon {
   background: #fff1f2;
 
   color: #f43f5e;
 }
 
-.streak-icon {
+.register-streak-icon {
   background: #ecfdf5;
 
   color: #10b981;
@@ -708,7 +714,7 @@
    FLOATING TEXT
 ========================================= */
 
-.floating-label {
+.register-floating-label {
   display: block;
 
   margin-bottom: 2px;
@@ -720,10 +726,10 @@
 
   text-transform: uppercase;
 
-  letter-spacing: 1px;
+  letter-spacing: 0.8px;
 }
 
-.floating-card strong {
+.register-floating-card strong {
   display: block;
 
   color: #1e293b;
@@ -732,26 +738,12 @@
   font-weight: 800;
 }
 
-.floating-card small {
-  color: #94a3b8;
-
-  font-size: 9px;
-
-  font-weight: 550;
-}
-
 
 /* =========================================
-   SHOWCASE FOOTER
+   FOOTER
 ========================================= */
 
-.showcase-footer {
-  position: relative;
-
-  z-index: 5;
-
-  margin-top: 15px;
-
+.register-showcase-footer {
   color: #94a3b8;
 
   font-size: 10px;
@@ -759,10 +751,10 @@
 
 
 /* =========================================
-   RIGHT LOGIN SECTION
+   FORM SECTION
 ========================================= */
 
-.login-form-section {
+.register-form-section {
   min-width: 0;
 
   box-sizing: border-box;
@@ -771,12 +763,12 @@
   align-items: center;
   justify-content: center;
 
-  padding: 50px 45px;
+  padding: 40px 45px;
 
   background: rgba(255, 255, 255, 0.94);
 }
 
-.login-form-container {
+.register-form-container {
   width: 100%;
 
   max-width: 390px;
@@ -787,18 +779,16 @@
    FORM HEADING
 ========================================= */
 
-.form-heading {
-  margin-bottom: 30px;
-
-  text-align: left;
+.register-form-heading {
+  margin-bottom: 24px;
 }
 
-.form-heading h2 {
-  margin: 0 0 8px;
+.register-form-heading h2 {
+  margin: 0 0 7px;
 
   color: #0f172a;
 
-  font-size: 30px;
+  font-size: 29px;
 
   line-height: 1.2;
 
@@ -807,17 +797,17 @@
   letter-spacing: -0.8px;
 }
 
-.form-heading p {
+.register-form-heading p {
   margin: 0;
 
   color: #64748b;
 
-  font-size: 13px;
+  font-size: 12px;
 
   line-height: 1.5;
 }
 
-.form-heading a {
+.register-form-heading a {
   color: #0878c8;
 
   font-weight: 700;
@@ -825,7 +815,7 @@
   text-decoration: none;
 }
 
-.form-heading a:hover {
+.register-form-heading a:hover {
   text-decoration: underline;
 
   text-underline-offset: 3px;
@@ -836,23 +826,33 @@
    INPUT GROUP
 ========================================= */
 
-.input-group {
-  margin-bottom: 19px;
+.register-input-group {
+  margin-bottom: 14px;
 }
 
-.input-group label {
+.register-input-group > label {
   display: block;
 
-  margin-bottom: 7px;
+  margin-bottom: 6px;
 
   color: #334155;
 
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
 
-  letter-spacing: 0.7px;
+  letter-spacing: 0.65px;
 
   text-transform: uppercase;
+}
+
+.register-input-group > label span {
+  color: #94a3b8;
+
+  font-weight: 550;
+
+  text-transform: lowercase;
+
+  letter-spacing: 0;
 }
 
 
@@ -860,23 +860,23 @@
    INPUT WRAPPER
 ========================================= */
 
-.input-wrapper {
-  position: relative;
-
+.register-input-wrapper {
   width: 100%;
+
+  position: relative;
 }
 
-.input-wrapper input {
+.register-input-wrapper input {
   width: 100%;
-  height: 48px;
+  height: 43px;
 
   box-sizing: border-box;
 
-  padding: 0 14px 0 42px;
+  padding: 0 13px 0 40px;
 
   border: 1px solid #e2e8f0;
 
-  border-radius: 11px;
+  border-radius: 10px;
 
   outline: none;
 
@@ -886,7 +886,7 @@
 
   font-family: inherit;
 
-  font-size: 13px;
+  font-size: 12px;
 
   transition:
     border-color 0.2s ease,
@@ -894,26 +894,26 @@
     background 0.2s ease;
 }
 
-.input-wrapper input::placeholder {
+.register-input-wrapper input::placeholder {
   color: #a0aec0;
 }
 
-.input-wrapper input:hover {
+.register-input-wrapper input:hover {
   border-color: #cbd5e1;
 
   background: #ffffff;
 }
 
-.input-wrapper input:focus {
+.register-input-wrapper input:focus {
   border-color: #0c8de9;
 
   background: #ffffff;
 
   box-shadow:
-    0 0 0 3px rgba(12, 141, 233, 0.10);
+    0 0 0 3px rgba(12, 141, 233, 0.1);
 }
 
-.input-wrapper input:disabled {
+.register-input-wrapper input:disabled {
   opacity: 0.65;
 
   cursor: not-allowed;
@@ -924,10 +924,10 @@
    INPUT ICON
 ========================================= */
 
-.input-icon {
+.register-input-icon {
   position: absolute;
 
-  left: 14px;
+  left: 13px;
   top: 50%;
 
   transform: translateY(-50%);
@@ -943,64 +943,26 @@
   z-index: 2;
 }
 
-.input-icon svg {
-  width: 16px;
-  height: 16px;
+.register-input-icon svg {
+  width: 15px;
+  height: 15px;
 
   fill: currentColor;
 }
 
 
 /* =========================================
-   PASSWORD LABEL
+   PASSWORD
 ========================================= */
 
-.password-label {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.register-password-wrapper input {
+  padding-right: 58px;
 }
 
-.password-label label {
-  margin-bottom: 7px;
-}
-
-.forgot-password {
-  padding: 0;
-
-  border: none;
-
-  background: transparent;
-
-  color: #0878c8;
-
-  font-family: inherit;
-
-  font-size: 10px;
-  font-weight: 650;
-
-  cursor: pointer;
-}
-
-.forgot-password:hover {
-  text-decoration: underline;
-
-  text-underline-offset: 2px;
-}
-
-
-/* =========================================
-   PASSWORD INPUT
-========================================= */
-
-.password-wrapper input {
-  padding-right: 60px;
-}
-
-.show-password {
+.register-show-password {
   position: absolute;
 
-  right: 13px;
+  right: 12px;
   top: 50%;
 
   transform: translateY(-50%);
@@ -1015,17 +977,17 @@
 
   font-family: inherit;
 
-  font-size: 10px;
+  font-size: 9px;
   font-weight: 700;
 
   cursor: pointer;
 }
 
-.show-password:hover {
+.register-show-password:hover {
   color: #0358a1;
 }
 
-.show-password:disabled {
+.register-show-password:disabled {
   opacity: 0.5;
 
   cursor: not-allowed;
@@ -1033,69 +995,35 @@
 
 
 /* =========================================
-   LOGIN OPTIONS
+   ERROR
 ========================================= */
 
-.login-options {
-  margin: -2px 0 18px;
-}
-
-.remember-me {
+.register-error {
   display: flex;
   align-items: center;
 
   gap: 8px;
 
-  color: #64748b;
+  margin: 3px 0 13px;
 
-  font-size: 11px;
-  font-weight: 550;
-
-  cursor: pointer;
-}
-
-.remember-me input {
-  width: 14px;
-  height: 14px;
-
-  margin: 0;
-
-  accent-color: #0c8de9;
-
-  cursor: pointer;
-}
-
-
-/* =========================================
-   ERROR
-========================================= */
-
-.login-error {
-  display: flex;
-  align-items: center;
-
-  gap: 9px;
-
-  margin-bottom: 15px;
-
-  padding: 11px 12px;
+  padding: 9px 11px;
 
   border: 1px solid #fecaca;
 
-  border-radius: 10px;
+  border-radius: 9px;
 
   background: #fff1f2;
 
   color: #be123c;
 
-  font-size: 11px;
+  font-size: 10px;
 
   line-height: 1.4;
 }
 
-.error-icon {
-  width: 18px;
-  height: 18px;
+.register-error-icon {
+  width: 17px;
+  height: 17px;
 
   flex-shrink: 0;
 
@@ -1109,22 +1037,22 @@
 
   color: #ffffff;
 
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 800;
 }
 
 
 /* =========================================
-   LOGIN BUTTON
+   REGISTER BUTTON
 ========================================= */
 
-.login-button {
+.register-button {
   width: 100%;
-  height: 48px;
+  height: 44px;
 
   border: none;
 
-  border-radius: 11px;
+  border-radius: 10px;
 
   background: linear-gradient(
     90deg,
@@ -1136,7 +1064,7 @@
 
   font-family: inherit;
 
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
 
   cursor: pointer;
@@ -1148,7 +1076,7 @@
   align-items: center;
   justify-content: center;
 
-  gap: 9px;
+  gap: 8px;
 
   transition:
     transform 0.2s ease,
@@ -1156,7 +1084,7 @@
     filter 0.2s ease;
 }
 
-.login-button:hover:not(:disabled) {
+.register-button:hover:not(:disabled) {
   transform: translateY(-1px);
 
   filter: brightness(0.97);
@@ -1165,11 +1093,11 @@
     0 11px 25px rgba(12, 141, 233, 0.32);
 }
 
-.login-button:active:not(:disabled) {
+.register-button:active:not(:disabled) {
   transform: translateY(0);
 }
 
-.login-button:disabled {
+.register-button:disabled {
   opacity: 0.7;
 
   cursor: not-allowed;
@@ -1179,12 +1107,12 @@
 
 
 /* =========================================
-   LOADING SPINNER
+   LOADING
 ========================================= */
 
-.loading-spinner {
-  width: 14px;
-  height: 14px;
+.register-loading-spinner {
+  width: 13px;
+  height: 13px;
 
   border: 2px solid rgba(255, 255, 255, 0.35);
 
@@ -1192,10 +1120,10 @@
 
   border-radius: 50%;
 
-  animation: spin 0.75s linear infinite;
+  animation: registerSpin 0.75s linear infinite;
 }
 
-@keyframes spin {
+@keyframes registerSpin {
   to {
     transform: rotate(360deg);
   }
@@ -1206,27 +1134,27 @@
    SECURITY NOTE
 ========================================= */
 
-.security-note {
+.register-security-note {
   display: flex;
   align-items: center;
   justify-content: center;
 
-  gap: 7px;
+  gap: 6px;
 
-  margin-top: 22px;
+  margin-top: 17px;
 
   color: #94a3b8;
 
-  font-size: 10px;
+  font-size: 9px;
 }
 
-.security-note svg {
-  width: 15px;
-  height: 15px;
-
-  fill: #10b981;
+.register-security-note svg {
+  width: 14px;
+  height: 14px;
 
   flex-shrink: 0;
+
+  fill: #10b981;
 }
 
 
@@ -1235,37 +1163,37 @@
 ========================================= */
 
 @media (max-width: 1050px) {
-  .login-header {
+  .register-header {
     padding-left: 24px;
     padding-right: 24px;
   }
 
-  .login-main {
+  .register-main {
     padding-left: 24px;
     padding-right: 24px;
   }
 
-  .login-showcase {
-    padding: 45px 42px 25px;
+  .register-showcase {
+    padding: 42px 40px 24px;
   }
 
-  .login-form-section {
-    padding: 40px 32px;
+  .register-form-section {
+    padding: 35px 30px;
   }
 
-  .showcase-content h1 {
-    font-size: 46px;
+  .register-showcase-content h1 {
+    font-size: 45px;
   }
 
-  .medicine-card {
+  .register-medicine-card {
     width: 270px;
   }
 
-  .heart-card {
+  .register-health-card {
     left: 0;
   }
 
-  .streak-card {
+  .register-streak-card {
     right: 0;
   }
 }
@@ -1276,60 +1204,60 @@
 ========================================= */
 
 @media (max-width: 850px) {
-  .login-card {
+  .register-card {
     grid-template-columns: 1fr 1fr;
 
-    min-height: 570px;
+    min-height: 600px;
 
     border-radius: 22px;
   }
 
-  .login-showcase {
-    padding: 38px 30px 22px;
+  .register-showcase {
+    padding: 35px 28px 22px;
   }
 
-  .login-form-section {
-    padding: 35px 26px;
+  .register-form-section {
+    padding: 30px 24px;
   }
 
-  .showcase-content h1 {
-    font-size: 38px;
+  .register-showcase-content h1 {
+    font-size: 36px;
 
-    letter-spacing: -1.8px;
+    letter-spacing: -1.6px;
   }
 
-  .showcase-description {
-    font-size: 13px;
-  }
-
-  .feature-item {
+  .register-showcase-description {
     font-size: 12px;
   }
 
-  .medical-visual {
-    height: 205px;
+  .register-feature-item {
+    font-size: 11px;
   }
 
-  .medicine-card {
+  .register-medical-visual {
+    height: 190px;
+  }
+
+  .register-medicine-card {
     width: 245px;
 
     padding: 14px;
   }
 
-  .floating-card {
-    transform: scale(0.9);
+  .register-floating-card {
+    transform: scale(0.88);
   }
 
-  .heart-card {
+  .register-health-card {
     left: -15px;
   }
 
-  .streak-card {
+  .register-streak-card {
     right: -15px;
   }
 
-  .form-heading h2 {
-    font-size: 27px;
+  .register-form-heading h2 {
+    font-size: 26px;
   }
 }
 
@@ -1339,34 +1267,32 @@
 ========================================= */
 
 @media (max-width: 700px) {
-  .login-page {
-    min-height: 100dvh;
-
+  .register-page {
     overflow-y: auto;
   }
 
-  .login-header {
+  .register-header {
     padding: 20px 20px 8px;
   }
 
-  .login-brand {
+  .register-brand {
     font-size: 23px;
   }
 
-  .login-brand-icon {
+  .register-brand-icon {
     width: 38px;
     height: 38px;
 
     border-radius: 11px;
   }
 
-  .login-main {
+  .register-main {
     display: block;
 
     padding: 15px 16px 30px;
   }
 
-  .login-card {
+  .register-card {
     display: flex;
     flex-direction: column;
 
@@ -1375,123 +1301,101 @@
     border-radius: 22px;
   }
 
-  /* -----------------------------------------
-     SHOWCASE
-  ----------------------------------------- */
 
-  .login-showcase {
+  /* SHOWCASE */
+
+  .register-showcase {
     width: 100%;
 
-    padding: 35px 25px 25px;
+    padding: 32px 25px 22px;
 
     border-right: none;
 
     border-bottom: 1px solid #edf2f7;
   }
 
-  .showcase-content {
-    max-width: none;
+  .register-showcase-badge {
+    margin-bottom: 15px;
+
+    font-size: 8px;
   }
 
-  .showcase-badge {
-    margin-bottom: 16px;
-
-    font-size: 9px;
-  }
-
-  .showcase-content h1 {
-    margin-bottom: 14px;
-
-    font-size: 38px;
+  .register-showcase-content h1 {
+    font-size: 36px;
 
     letter-spacing: -1.5px;
   }
 
-  .showcase-description {
-    margin-bottom: 20px;
-
-    font-size: 13px;
-  }
-
-  .feature-list {
-    gap: 9px;
-  }
-
-  .feature-item {
+  .register-showcase-description {
     font-size: 12px;
+
+    margin-bottom: 18px;
   }
 
-  .feature-check {
-    width: 21px;
-    height: 21px;
-
-    font-size: 10px;
+  .register-feature-list {
+    gap: 8px;
   }
 
-  .medical-visual {
-    height: 190px;
-
-    margin-top: 22px;
+  .register-feature-item {
+    font-size: 11px;
   }
 
-  .medicine-card {
-    width: 255px;
+  .register-feature-check {
+    width: 20px;
+    height: 20px;
 
-    padding: 14px;
+    font-size: 9px;
   }
 
-  .floating-card {
+  .register-medical-visual {
+    height: 175px;
+
+    margin-top: 18px;
+  }
+
+  .register-medicine-card {
+    width: 250px;
+  }
+
+  .register-floating-card {
     padding: 8px 10px;
 
-    transform: scale(0.88);
+    transform: scale(0.82);
   }
 
-  .heart-card {
-    top: 0;
+  .register-health-card {
     left: -8px;
   }
 
-  .streak-card {
+  .register-streak-card {
     right: -8px;
-    bottom: 0;
   }
 
-  .showcase-footer {
+  .register-showcase-footer {
     display: none;
   }
 
-  /* -----------------------------------------
-     FORM
-  ----------------------------------------- */
 
-  .login-form-section {
+  /* FORM */
+
+  .register-form-section {
     width: 100%;
 
-    padding: 35px 25px 40px;
+    padding: 32px 25px 38px;
   }
 
-  .login-form-container {
+  .register-form-container {
     max-width: 450px;
 
     margin: 0 auto;
   }
 
-  .form-heading {
-    margin-bottom: 25px;
-
-    text-align: left;
+  .register-form-heading {
+    margin-bottom: 23px;
   }
 
-  .form-heading h2 {
-    font-size: 28px;
-  }
-
-  .form-heading p {
-    font-size: 12px;
-  }
-
-  .input-group {
-    margin-bottom: 17px;
+  .register-form-heading h2 {
+    font-size: 27px;
   }
 }
 
@@ -1501,93 +1405,81 @@
 ========================================= */
 
 @media (max-width: 420px) {
-  .login-header {
+  .register-header {
     padding: 16px 16px 6px;
   }
 
-  .login-brand {
+  .register-brand {
     font-size: 21px;
 
     gap: 9px;
   }
 
-  .login-brand-icon {
+  .register-brand-icon {
     width: 36px;
     height: 36px;
   }
 
-  .login-main {
+  .register-main {
     padding: 12px 10px 25px;
   }
 
-  .login-card {
+  .register-card {
     border-radius: 19px;
   }
 
-  .login-showcase {
-    padding: 28px 20px 22px;
+  .register-showcase {
+    padding: 27px 20px 20px;
   }
 
-  .showcase-content h1 {
-    font-size: 34px;
+  .register-showcase-content h1 {
+    font-size: 32px;
   }
 
-  .showcase-description {
-    font-size: 12px;
-  }
-
-  .feature-item {
+  .register-showcase-description {
     font-size: 11px;
   }
 
-  .medical-visual {
-    height: 170px;
+  .register-feature-item {
+    font-size: 10px;
   }
 
-  .medicine-card {
-    width: 230px;
+  .register-medical-visual {
+    height: 160px;
+  }
+
+  .register-medicine-card {
+    width: 225px;
 
     padding: 12px;
   }
 
-  .medicine-info h3 {
-    font-size: 10px;
+  .register-floating-card {
+    transform: scale(0.75);
   }
 
-  .medicine-info p {
-    font-size: 8px;
-  }
-
-  .medicine-time {
-    font-size: 8px;
-  }
-
-  .floating-card {
-    transform: scale(0.78);
-  }
-
-  .heart-card {
+  .register-health-card {
     left: -24px;
   }
 
-  .streak-card {
+  .register-streak-card {
     right: -24px;
   }
 
-  .login-form-section {
-    padding: 30px 20px 35px;
+  .register-form-section {
+    padding: 28px 20px 34px;
   }
 
-  .form-heading h2 {
-    font-size: 26px;
+  .register-form-heading h2 {
+    font-size: 25px;
   }
 
-  .input-wrapper input {
+  .register-input-wrapper input {
+    height: 45px;
+  }
+
+  .register-button {
     height: 46px;
-  }
-
-  .login-button {
-    height: 47px;
   }
 }
 
@@ -1597,27 +1489,27 @@
 ========================================= */
 
 @media (max-width: 350px) {
-  .showcase-content h1 {
-    font-size: 31px;
+  .register-showcase-content h1 {
+    font-size: 29px;
   }
 
-  .showcase-description {
-    font-size: 11px;
-  }
-
-  .feature-item {
+  .register-showcase-description {
     font-size: 10px;
   }
 
-  .medical-visual {
-    height: 155px;
+  .register-feature-item {
+    font-size: 9px;
   }
 
-  .medicine-card {
-    width: 210px;
+  .register-medical-visual {
+    height: 145px;
   }
 
-  .floating-card {
+  .register-medicine-card {
+    width: 205px;
+  }
+
+  .register-floating-card {
     display: none;
   }
 }
@@ -1628,17 +1520,17 @@
 ========================================= */
 
 @media (prefers-reduced-motion: reduce) {
-  .ambient-glow,
-  .badge-dot,
-  .heart-card,
-  .streak-card,
-  .loading-spinner {
+  .register-ambient-glow,
+  .register-badge-dot,
+  .register-health-card,
+  .register-streak-card,
+  .register-loading-spinner {
     animation: none;
   }
 
-  .medicine-card,
-  .login-button,
-  .input-wrapper input {
+  .register-medicine-card,
+  .register-button,
+  .register-input-wrapper input {
     transition: none;
   }
 }
