@@ -18,37 +18,36 @@ class MockCallGateway extends CallGatewayInterface {
     this.statusListeners.forEach((cb) => cb(fullEvent));
   }
 
-  async dial({ toNumber, audioFile, reminderId }) {
-    const callId = uuidv4();
-    const startedAt = new Date();
+  async dial({ toNumber, audioFile, reminderId, attemptNumber }) {
+  const callId = uuidv4();
+  const startedAt = new Date();
+  const meta = { toNumber, audioFile, attemptNumber };
 
-    console.log(`[MOCK CALL] Dialing ${toNumber} | reminderId=${reminderId} | audio="${audioFile}"`);
-    this.activeCalls.set(callId, { toNumber, audioFile, reminderId, startedAt });
+  console.log(`[MOCK CALL] Dialing ${toNumber} | reminderId=${reminderId} | audio="${audioFile}"`);
+  this.activeCalls.set(callId, { toNumber, audioFile, reminderId, startedAt });
 
-    setTimeout(() => this._emitStatus({ callId, reminderId, status: 'ringing' }), 500);
+  setTimeout(() => this._emitStatus({ callId, reminderId, status: 'ringing', ...meta }), 500);
 
-    const dialDelayMs = 2000 + Math.random() * 2000;
-    setTimeout(() => {
-      const outcome = this._simulateOutcome();
+  const dialDelayMs = 2000 + Math.random() * 2000;
+  setTimeout(() => {
+    const outcome = this._simulateOutcome();
 
-      if (outcome === 'connected') {
-        this._emitStatus({ callId, reminderId, status: 'connected' });
-        const playbackSeconds = 8 + Math.floor(Math.random() * 8);
-        console.log(`[MOCK CALL] Connected. "Playing" ${audioFile} for ~${playbackSeconds}s...`);
+    if (outcome === 'connected') {
+      this._emitStatus({ callId, reminderId, status: 'connected', ...meta });
+      const playbackSeconds = 8 + Math.floor(Math.random() * 8);
 
-        setTimeout(() => {
-          this._emitStatus({ callId, reminderId, status: 'completed', durationSeconds: playbackSeconds });
-          this.activeCalls.delete(callId);
-        }, playbackSeconds * 100);
-      } else {
-        console.log(`[MOCK CALL] Outcome: ${outcome}`);
-        this._emitStatus({ callId, reminderId, status: outcome });
+      setTimeout(() => {
+        this._emitStatus({ callId, reminderId, status: 'completed', durationSeconds: playbackSeconds, ...meta });
         this.activeCalls.delete(callId);
-      }
-    }, dialDelayMs);
+      }, playbackSeconds * 100);
+    } else {
+      this._emitStatus({ callId, reminderId, status: outcome, ...meta });
+      this.activeCalls.delete(callId);
+    }
+  }, dialDelayMs);
 
-    return { callId, status: 'initiated', startedAt };
-  }
+  return { callId, status: 'initiated', startedAt };
+}
 
   async hangup(callId) {
     if (this.activeCalls.has(callId)) {
