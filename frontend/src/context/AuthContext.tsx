@@ -13,7 +13,7 @@ export interface User {
 }
 
 interface AuthContextValue {
-  user: User | null;
+  users: User | null;
   token: string | null;
   isAuthenticated: boolean;
   login: (token: string, user: User) => void;
@@ -23,7 +23,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
 function readStoredUser(): User | null {
-  const raw = localStorage.getItem("user");
+  const raw = localStorage.getItem("users");
   if (!raw) return null;
   try {
     return JSON.parse(raw) as User;
@@ -36,25 +36,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() =>
     localStorage.getItem("token")
   );
-  const [user, setUser] = useState<User | null>(() => readStoredUser());
+  const [users, setUsers] = useState<User | null>(() => readStoredUser());
 
   function login(newToken: string, newUser: User) {
     localStorage.setItem("token", newToken);
     localStorage.setItem("user", JSON.stringify(newUser));
     setToken(newToken);
-    setUser(newUser);
+    setUsers(newUser);
   }
 
   function logout() {
     localStorage.removeItem("token");
-    localStorage.removeItem("user");
+    localStorage.removeItem("users");
     setToken(null);
-    setUser(null);
+    setUsers(null);
   }
 
   return (
     <AuthContext.Provider
-      value={{ user, token, isAuthenticated: !!token, login, logout }}
+      value={{ users, token, isAuthenticated: !!token, login, logout }}
     >
       {children}
     </AuthContext.Provider>

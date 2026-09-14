@@ -8,7 +8,7 @@ export interface User {
 export interface AuthResponse {
   message: string;
   token: string;
-  user: User;
+  users: User;
 }
 
 const API_URL = "http://localhost:5000/api";
@@ -53,6 +53,53 @@ export async function registerUser(
 
   if (!response.ok) {
     throw new Error(data.error || "Registration failed");
+  }
+
+  return data;
+}
+export interface DashboardReminder {
+  id: number;
+  medicine_name: string;
+  reminder_time: string;
+  status: string;
+  dosage: string;
+}
+
+export interface DashboardMedicine {
+  id: number;
+  name: string;
+  dosage: string;
+  frequency: string;
+  start_date: string | null;
+}
+
+export interface DashboardStats {
+  activeMedicines: number;
+  remindersToday: number;
+  adherenceRate: number;
+  missedThisWeek: number;
+}
+
+export interface DashboardData {
+  stats: DashboardStats;
+  todaysReminders: DashboardReminder[];
+  recentMedicines: DashboardMedicine[];
+}
+
+export async function getDashboard(): Promise<DashboardData> {
+  const token = localStorage.getItem("token");
+
+  const response = await fetch(`${API_URL}/dashboard`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to fetch dashboard");
   }
 
   return data;

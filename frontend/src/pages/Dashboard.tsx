@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import StatCard from "../components/StatCard";
 import ReminderCard, { type Reminder } from "../components/ReminderCard";
@@ -5,7 +6,10 @@ import MedicineCard, { type Medicine } from "../components/MedicineCard";
 import { PillIcon, BellIcon, ChartIcon, ClockIcon } from "../components/icons";
 import "../styles/shared.css";
 import "./Dashboard.css";
-
+import {
+  getDashboard,
+  type DashboardData,
+} from "../services/authService";
 // TODO: replace with real data from GET /api/medicines, /api/reminders,
 // /api/history/adherence once those backend routes exist.
 const todaysReminders: Reminder[] = [
@@ -20,9 +24,34 @@ const recentMedicines: Medicine[] = [
 ];
 
 function Dashboard() {
-  const { user } = useAuth();
-  const firstName = user?.name?.split(" ")[0] ?? "there";
+  const { users } = useAuth();
+const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+const [loading, setLoading] = useState(true);
+const [error, setError] = useState("");
 
+const firstName = users?.name?.split(" ")[0] ?? "there";
+useEffect(() => {
+  const fetchDashboard = async () => {
+    try {
+      const data = await getDashboard();
+      setDashboardData(data);
+    } catch (err) {
+      console.error("Dashboard error:", err);
+      setError("Failed to load dashboard data");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  fetchDashboard();
+}, []);
+if (loading) {
+  return <div>Loading dashboard...</div>;
+}
+
+if (error) {
+  return <div>{error}</div>;
+}
   return (
     <div>
       <div className="page-header">
@@ -32,12 +61,36 @@ function Dashboard() {
         </div>
       </div>
 
-      <div className="dashboard-stats">
-        <StatCard label="Active Medicines" value={5} icon={<PillIcon />} tone="blue" />
-        <StatCard label="Reminders Today" value={3} icon={<BellIcon />} tone="green" />
-        <StatCard label="Adherence Rate" value="92%" icon={<ChartIcon />} tone="orange" hint="Last 30 days" />
-        <StatCard label="Missed This Week" value={1} icon={<ClockIcon />} tone="red" />
-      </div>
+<div className="dashboard-stats">
+  <StatCard
+    label="Active Medicines"
+    value={dashboardData?.stats.activeMedicines ?? 0}
+    icon={<PillIcon />}
+    tone="blue"
+  />
+
+  <StatCard
+    label="Reminders Today"
+    value={dashboardData?.stats.remindersToday ?? 0}
+    icon={<BellIcon />}
+    tone="green"
+  />
+{/* 
+  <StatCard
+    label="Adherence Rate"
+    value={`${dashboardData?.stats.adherence ?? 0}%`}
+    icon={<ChartIcon />}
+    tone="orange"
+    hint="Last 30 days"
+  /> */}
+
+  <StatCard
+    label="Missed This Week"
+    value={dashboardData?.stats.missedThisWeek ?? 0}
+    icon={<ClockIcon />}
+    tone="red"
+  />
+</div>-
 
       <div className="dashboard-columns">
         <section className="dashboard-section">
