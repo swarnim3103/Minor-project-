@@ -21,7 +21,11 @@ function initials(name: string) {
     .join("");
 }
 
-function Navbar() {
+interface NavbarProps {
+  onMenuClick: () => void;
+}
+
+function Navbar({ onMenuClick }: NavbarProps) {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -35,24 +39,57 @@ function Navbar() {
 
   return (
     <header className="navbar">
-      <h1 className="navbar-title">{title}</h1>
 
+      {/* Left side */}
+      <div className="navbar-left">
+
+        <button
+          className="navbar-menu-button"
+          onClick={onMenuClick}
+          aria-label="Open navigation menu"
+        >
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+
+        <h1 className="navbar-title">
+          {title}
+        </h1>
+
+      </div>
+
+      {/* Right side */}
       <div className="navbar-actions">
+
         <div className="navbar-user">
+
           <div className="navbar-avatar">
             {user ? initials(user.name) : "?"}
           </div>
+
           <div className="navbar-user-info">
-            <span className="navbar-user-name">{user?.name ?? "User"}</span>
-            <span className="navbar-user-role">{user?.role ?? ""}</span>
+            <span className="navbar-user-name">
+              {user?.name ?? "User"}
+            </span>
+
+            <span className="navbar-user-role">
+              {user?.role ?? ""}
+            </span>
           </div>
+
         </div>
 
-        <button className="navbar-logout" onClick={handleLogout}>
+        <button
+          className="navbar-logout"
+          onClick={handleLogout}
+        >
           <LogoutIcon width={17} height={17} />
           <span>Log out</span>
         </button>
+
       </div>
+
     </header>
   );
 }

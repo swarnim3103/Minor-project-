@@ -1,0 +1,85 @@
+/* =========================================
+   FLOATING CHATBOT SHORTCUT
+========================================= */
+
+.chatbot-shortcut {
+  position: fixed;
+
+  right: 28px;
+  bottom: 28px;
+
+  width: 58px;
+  height: 58px;
+
+  display: flex;
+
+  align-items: center;
+  justify-content: center;
+
+  border: none;
+
+  border-radius: 50%;
+
+  background: var(--color-primary);
+
+  color: #ffffff;
+
+  cursor: pointer;
+
+  box-shadow:
+    0 8px 24px rgba(38, 70, 125, 0.28);
+
+  z-index: 15;
+
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease;
+}
+
+.chatbot-shortcut:hover {
+  transform: translateY(-3px);
+
+  box-shadow:
+    0 12px 28px rgba(38, 70, 125, 0.35);
+
+  background: var(--color-primary-mid);
+}
+
+.chatbot-shortcut:active {
+  transform: scale(0.94);
+}
+
+
+/* =========================================
+   MOBILE
+========================================= */
+
+@media (max-width: 700px) {
+
+  .chatbot-shortcut {
+    width: 54px;
+    height: 54px;
+
+    right: 18px;
+    bottom: 18px;
+  }
+
+}
+
+
+/* =========================================
+   SMALL MOBILE
+========================================= */
+
+@media (max-width: 400px) {
+
+  .chatbot-shortcut {
+    width: 50px;
+    height: 50px;
+
+    right: 15px;
+    bottom: 15px;
+  }
+
+}

@@ -30,12 +30,16 @@
   width: 55%;
   height: 100vh;
 
-  display: flex;
-  flex-direction: column;
+  box-sizing: border-box;
+
+  display: grid;
+
+  grid-template-columns: 1.1fr 0.9fr;
+  grid-template-rows: auto 1fr;
 
   position: relative;
 
-  padding: 38px 60px;
+  padding: 42px 60px;
 
   background: #ffffff;
 
@@ -48,10 +52,14 @@
 ========================================= */
 
 .brand {
+  grid-column: 1 / -1;
+
   display: flex;
   align-items: center;
 
   gap: 10px;
+
+  margin-bottom: 10px;
 
   font-size: 24px;
   font-weight: 700;
@@ -62,49 +70,23 @@
 }
 
 .brand-icon {
-  width: 34px;
-  height: 34px;
+  width: 38px;
+  height: 38px;
 
   display: flex;
   align-items: center;
   justify-content: center;
 
-  border-radius: 9px;
+  border-radius: 10px;
 
   background: #4169b5;
 
   color: #ffffff;
 
-  font-size: 26px;
+  font-size: 27px;
   font-weight: 400;
 
   line-height: 1;
-}
-
-
-/* =========================================
-   ILLUSTRATION
-========================================= */
-
-.illustration-container {
-  flex: 1;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  min-height: 0;
-
-  padding: 20px 20px 5px;
-}
-
-.login-illustration {
-  width: min(80%, 500px);
-  max-height: 45vh;
-
-  object-fit: contain;
-
-  display: block;
 }
 
 
@@ -113,23 +95,28 @@
 ========================================= */
 
 .left-content {
-  flex-shrink: 0;
+  grid-column: 1;
+  grid-row: 2;
 
-  max-width: 620px;
+  align-self: center;
 
-  padding-bottom: 15px;
+  max-width: 500px;
+
+  padding: 0 10px 20px 0;
+
+  z-index: 2;
 }
 
 .left-content h1 {
-  margin: 0 0 14px;
+  margin: 0 0 18px;
 
-  font-size: clamp(34px, 4vw, 52px);
+  font-size: clamp(40px, 4vw, 56px);
 
-  line-height: 1.08;
+  line-height: 1.05;
 
-  font-weight: 700;
+  font-weight: 750;
 
-  letter-spacing: -1.5px;
+  letter-spacing: -2px;
 
   color: #263b63;
 }
@@ -139,11 +126,11 @@
 }
 
 .left-content > p {
-  margin: 0 0 20px;
+  margin: 0 0 25px;
 
-  font-size: 15px;
+  font-size: 16px;
 
-  line-height: 1.6;
+  line-height: 1.65;
 
   color: #697891;
 }
@@ -155,16 +142,18 @@
 
 .feature-list {
   display: flex;
+
   flex-direction: column;
 
-  gap: 9px;
+  gap: 12px;
 }
 
 .feature-item {
   display: flex;
+
   align-items: center;
 
-  gap: 10px;
+  gap: 11px;
 
   font-size: 14px;
 
@@ -172,8 +161,10 @@
 }
 
 .check-icon {
-  width: 21px;
-  height: 21px;
+  width: 23px;
+  height: 23px;
+
+  flex-shrink: 0;
 
   display: flex;
   align-items: center;
@@ -186,7 +177,40 @@
   color: #4e72bd;
 
   font-size: 12px;
+
   font-weight: 700;
+}
+
+
+/* =========================================
+   ILLUSTRATION
+========================================= */
+
+.illustration-container {
+  grid-column: 2;
+  grid-row: 2;
+
+  align-self: center;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  padding: 0;
+
+  min-height: 0;
+}
+
+.login-illustration {
+  width: min(100%, 340px);
+
+  max-height: 430px;
+
+  object-fit: contain;
+
+  display: block;
 }
 
 
@@ -198,8 +222,12 @@
   width: 45%;
   height: 100vh;
 
+  box-sizing: border-box;
+
   display: flex;
+
   align-items: center;
+
   justify-content: center;
 
   background: #5274bd;
@@ -216,6 +244,7 @@
 
 .login-form-container {
   width: 100%;
+
   max-width: 400px;
 
   color: #ffffff;
@@ -336,7 +365,9 @@
 
 .password-label {
   display: flex;
+
   align-items: center;
+
   justify-content: space-between;
 }
 
@@ -383,6 +414,7 @@
   position: absolute;
 
   right: 13px;
+
   top: 50%;
 
   transform: translateY(-50%);
@@ -415,6 +447,7 @@
 
 .remember-me {
   display: flex;
+
   align-items: center;
 
   gap: 7px;
@@ -509,7 +542,9 @@
 
 .security-note {
   display: flex;
+
   align-items: center;
+
   justify-content: center;
 
   gap: 7px;
@@ -523,15 +558,53 @@
 
 
 /* =========================================
-   RESPONSIVE
+   TABLET
 ========================================= */
 
-@media (max-width: 900px) {
+@media (max-width: 1000px) {
 
   .login-left {
     width: 50%;
 
-    padding: 30px;
+    padding: 35px 35px;
+
+    grid-template-columns: 1fr;
+
+    grid-template-rows: auto auto auto;
+  }
+
+  .brand {
+    grid-column: 1;
+
+    grid-row: 1;
+  }
+
+  .illustration-container {
+    grid-column: 1;
+
+    grid-row: 2;
+
+    margin: 25px 0 10px;
+  }
+
+  .login-illustration {
+    width: min(70%, 280px);
+
+    max-height: 280px;
+  }
+
+  .left-content {
+    grid-column: 1;
+
+    grid-row: 3;
+
+    align-self: start;
+
+    padding: 0;
+  }
+
+  .left-content h1 {
+    font-size: 40px;
   }
 
   .login-right {
@@ -539,13 +612,37 @@
 
     padding: 30px;
   }
+}
 
-  .left-content h1 {
-    font-size: 38px;
+
+/* =========================================
+   SMALL TABLET
+========================================= */
+
+@media (max-width: 850px) {
+
+  .login-left {
+    padding: 30px 25px;
   }
 
-  .login-illustration {
-    width: 90%;
+  .login-right {
+    padding: 25px;
+  }
+
+  .left-content h1 {
+    font-size: 36px;
+  }
+
+  .left-content > p {
+    font-size: 14px;
+  }
+
+  .feature-item {
+    font-size: 13px;
+  }
+
+  .form-heading h2 {
+    font-size: 30px;
   }
 }
 
@@ -557,42 +654,82 @@
 @media (max-width: 700px) {
 
   .login-page {
-    height: 100vh;
+    width: 100%;
 
-    overflow-y: auto;
+    min-height: 100vh;
+
+    height: auto;
 
     display: block;
+
+    overflow-y: auto;
   }
+
+
+  /* LEFT */
 
   .login-left {
     width: 100%;
+
     height: auto;
 
-    min-height: 42vh;
+    min-height: auto;
 
-    box-sizing: border-box;
+    display: flex;
 
-    padding: 25px 25px 30px;
+    flex-direction: column;
+
+    padding: 25px 25px 35px;
+
+    overflow: visible;
+  }
+
+  .brand {
+    order: 1;
+
+    margin-bottom: 20px;
   }
 
   .illustration-container {
-    min-height: 180px;
+    order: 2;
 
-    padding: 10px;
+    margin: 0 0 20px;
+
+    min-height: 180px;
   }
 
   .login-illustration {
-    width: min(75%, 300px);
+    width: min(75%, 280px);
 
-    max-height: 22vh;
+    max-height: 220px;
   }
 
   .left-content {
-    display: none;
+    order: 3;
+
+    max-width: 100%;
+
+    padding: 0;
   }
+
+  .left-content h1 {
+    font-size: 38px;
+
+    letter-spacing: -1px;
+  }
+
+  .left-content > p {
+    font-size: 14px;
+
+    line-height: 1.6;
+  }
+
+
+  /* RIGHT */
 
   .login-right {
     width: 100%;
+
     height: auto;
 
     min-height: 58vh;
@@ -602,11 +739,56 @@
     padding: 40px 25px;
   }
 
+  .login-form-container {
+    max-width: 450px;
+  }
+
   .form-heading {
     margin-bottom: 30px;
   }
 
   .form-heading h2 {
     font-size: 30px;
+  }
+}
+
+
+/* =========================================
+   VERY SMALL MOBILE
+========================================= */
+
+@media (max-width: 400px) {
+
+  .login-left {
+    padding: 22px 20px 30px;
+  }
+
+  .brand {
+    font-size: 22px;
+  }
+
+  .brand-icon {
+    width: 34px;
+    height: 34px;
+
+    font-size: 24px;
+  }
+
+  .login-illustration {
+    width: 75%;
+
+    max-height: 190px;
+  }
+
+  .left-content h1 {
+    font-size: 34px;
+  }
+
+  .login-right {
+    padding: 35px 20px;
+  }
+
+  .form-heading h2 {
+    font-size: 28px;
   }
 }

@@ -18,22 +18,40 @@ const navItems = [
   { to: "/chatbot", label: "AI Chatbot", Icon: SparkleIcon },
 ];
 
-function Sidebar() {
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+function Sidebar({ isOpen, onClose }: SidebarProps) {
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${isOpen ? "sidebar-open" : ""}`}>
+      {/* Brand */}
       <div className="sidebar-brand">
         <div className="sidebar-brand-icon">+</div>
         <span>MedCare</span>
+
+        {/* Close button */}
+        <button
+          className="sidebar-close"
+          onClick={onClose}
+          aria-label="Close menu"
+        >
+          ×
+        </button>
       </div>
 
+      {/* Navigation */}
       <nav className="sidebar-nav">
         {navItems.map(({ to, label, Icon }) => (
           <NavLink
             key={to}
             to={to}
             className={({ isActive }) =>
-              "sidebar-link" + (isActive ? " sidebar-link-active" : "")
+              "sidebar-link" +
+              (isActive ? " sidebar-link-active" : "")
             }
+            onClick={onClose}
           >
             <Icon className="sidebar-link-icon" />
             <span>{label}</span>
@@ -41,6 +59,7 @@ function Sidebar() {
         ))}
       </nav>
 
+      {/* Footer */}
       <div className="sidebar-footer">
         Educational information only — always confirm with a doctor.
       </div>

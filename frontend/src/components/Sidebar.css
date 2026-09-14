@@ -1,65 +1,148 @@
+/* =========================================
+   SIDEBAR
+========================================= */
+
 .sidebar {
   width: 240px;
-  flex-shrink: 0;
+  min-width: 240px;
+
   height: 100vh;
-  position: sticky;
-  top: 0;
+  height: 100dvh;
+
+  flex-shrink: 0;
 
   display: flex;
   flex-direction: column;
 
+  box-sizing: border-box;
+
   background: var(--color-primary-dark);
   color: #ffffff;
+
   padding: 24px 16px;
+
+  position: relative;
+
+  z-index: 100;
 }
+
+/* =========================================
+   BRAND
+========================================= */
 
 .sidebar-brand {
   display: flex;
   align-items: center;
+
   gap: 10px;
+
+  padding: 0 8px;
+  margin-bottom: 32px;
 
   font-size: 19px;
   font-weight: 700;
-  padding: 0 8px;
-  margin-bottom: 32px;
+
+  color: #ffffff;
 }
 
 .sidebar-brand-icon {
-  width: 30px;
-  height: 30px;
-  border-radius: 8px;
+  width: 34px;
+  height: 34px;
+
+  flex-shrink: 0;
+
+  border-radius: 9px;
+
   background: var(--color-primary-mid);
+
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+
+  color: #ffffff;
+
+  font-size: 22px;
+  font-weight: 500;
+
   line-height: 1;
 }
+
+/* =========================================
+   CLOSE BUTTON
+========================================= */
+
+.sidebar-close {
+  display: none;
+
+  margin-left: auto;
+
+  width: 30px;
+  height: 30px;
+
+  border: none;
+  border-radius: 7px;
+
+  background: rgba(255, 255, 255, 0.08);
+
+  color: rgba(255, 255, 255, 0.85);
+
+  font-size: 23px;
+  line-height: 1;
+
+  cursor: pointer;
+
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-close:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+
+/* =========================================
+   NAVIGATION
+========================================= */
 
 .sidebar-nav {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+
+  gap: 5px;
 }
 
+/* =========================================
+   NAVIGATION LINK
+========================================= */
+
 .sidebar-link {
+  min-height: 46px;
+
   display: flex;
   align-items: center;
+
   gap: 12px;
 
+  box-sizing: border-box;
+
   padding: 10px 12px;
-  border-radius: 8px;
+
+  border-radius: 9px;
 
   color: rgba(255, 255, 255, 0.72);
+
   text-decoration: none;
+
   font-size: 14px;
   font-weight: 500;
 
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .sidebar-link:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.08);
   color: #ffffff;
 }
 
@@ -68,21 +151,77 @@
   color: #ffffff;
 }
 
+/* =========================================
+   ICON
+========================================= */
+
 .sidebar-link-icon {
+  width: 19px;
+  height: 19px;
+
   flex-shrink: 0;
 }
 
+/* =========================================
+   FOOTER
+========================================= */
+
 .sidebar-footer {
   margin-top: auto;
-  padding: 12px 8px 0;
+
+  padding: 14px 8px 0;
+
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+
   font-size: 11.5px;
   line-height: 1.5;
+
   color: rgba(255, 255, 255, 0.45);
-  border-top: 1px solid rgba(255, 255, 255, 0.12);
 }
+
+/* =========================================
+   MOBILE SIDEBAR
+========================================= */
 
 @media (max-width: 900px) {
   .sidebar {
-    display: none;
+    display: flex;
+
+    position: fixed;
+
+    left: 0;
+    top: 0;
+    bottom: 0;
+
+    width: 270px;
+    min-width: 270px;
+
+    transform: translateX(-100%);
+
+    transition: transform 0.25s ease;
+
+    box-shadow: 8px 0 30px rgba(15, 23, 42, 0.18);
+
+    z-index: 100;
+  }
+
+  .sidebar.sidebar-open {
+    transform: translateX(0);
+  }
+
+  .sidebar-close {
+    display: flex;
+  }
+}
+
+/* =========================================
+   SMALL MOBILE
+========================================= */
+
+@media (max-width: 560px) {
+  .sidebar {
+    width: 82%;
+    min-width: 82%;
+    max-width: 300px;
   }
 }
