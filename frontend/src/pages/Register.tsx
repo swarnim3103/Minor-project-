@@ -21,37 +21,307 @@ function Register() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // =========================
+  // PASSWORD VALIDATION
+  // =========================
+
+  const passwordChecks = {
+    minLength: password.length >= 8,
+    maxLength: password.length <= 64,
+    uppercase: /[A-Z]/.test(password),
+    lowercase: /[a-z]/.test(password),
+    number: /[0-9]/.test(password),
+    special: /[^A-Za-z0-9\s]/.test(password),
+    noSpaces: !/\s/.test(password),
+  };
+
+  const isPasswordValid =
+    passwordChecks.minLength &&
+    passwordChecks.maxLength &&
+    passwordChecks.uppercase &&
+    passwordChecks.lowercase &&
+    passwordChecks.number &&
+    passwordChecks.special &&
+    passwordChecks.noSpaces;
+
+  // =========================
+  // EMAIL VALIDATION
+  // =========================
+
+  const isValidEmail = (value: string): boolean => {
+    const trimmedEmail = value.trim();
+
+    /*
+     * This checks for a normal email structure:
+     * something@example.com
+     *
+     * It also prevents:
+     * - spaces
+     * - multiple @
+     * - missing domain
+     * - missing domain extension
+     * - consecutive dots
+     */
+    const emailRegex =
+      /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/;
+
+    if (!trimmedEmail) {
+      return false;
+    }
+
+    if (trimmedEmail.includes(" ")) {
+      return false;
+    }
+
+    if (trimmedEmail.includes("..")) {
+      return false;
+    }
+
+    return emailRegex.test(trimmedEmail);
+  };
+
+  // =========================
+  // NAME VALIDATION
+  // =========================
+
+  const isValidName = (value: string): boolean => {
+    const trimmedName = value.trim();
+
+    // Minimum and maximum length
+    if (trimmedName.length < 2 || trimmedName.length > 100) {
+      return false;
+    }
+
+    /*
+     * Allows:
+     * - English letters
+     * - spaces
+     * - hyphen
+     * - apostrophe
+     *
+     * Examples:
+     * Vaishnavi Sharma
+     * Mary-Jane
+     * O'Connor
+     */
+    const nameRegex = /^[A-Za-z]+(?:[ '-][A-Za-z]+)*$/;
+
+    return nameRegex.test(trimmedName);
+  };
+
+  // =========================
+  // PHONE VALIDATION
+  // =========================
+
+  const isValidPhone = (value: string): boolean => {
+    /*
+     * Indian mobile number:
+     * - exactly 10 digits
+     * - starts with 6, 7, 8 or 9
+     */
+    const phoneRegex = /^[6-9][0-9]{9}$/;
+
+    return phoneRegex.test(value);
+  };
+
+  // =========================
+  // FORM SUBMIT
+  // =========================
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
     setError("");
 
-    if (!name || !email || !password) {
-      setError("Please fill in all required fields.");
+    // Trim values that should not contain accidental spaces
+    const trimmedName = name.trim();
+    const trimmedEmail = email.trim();
+    const trimmedPhone = phoneNumber.trim();
+
+    // =========================
+    // REQUIRED FIELD CHECK
+    // =========================
+
+    if (!trimmedName) {
+      setError("Please enter your full name.");
       return;
     }
+
+    if (!trimmedEmail) {
+      setError("Please enter your email address.");
+      return;
+    }
+
+    if (!trimmedPhone) {
+      setError("Please enter your phone number.");
+      return;
+    }
+
+    if (!password) {
+      setError("Please create a password.");
+      return;
+    }
+
+    if (!confirmPassword) {
+      setError("Please confirm your password.");
+      return;
+    }
+
+    // =========================
+    // NAME CHECK
+    // =========================
+
+    if (trimmedName.length < 2) {
+      setError("Full name must contain at least 2 characters.");
+      return;
+    }
+
+    if (trimmedName.length > 100) {
+      setError("Full name must not exceed 100 characters.");
+      return;
+    }
+
+    if (!isValidName(trimmedName)) {
+      setError(
+        "Full name can only contain letters, spaces, hyphens, and apostrophes."
+      );
+      return;
+    }
+
+    // =========================
+    // EMAIL CHECK
+    // =========================
+
+    if (!isValidEmail(trimmedEmail)) {
+      setError("Please enter a valid email address.");
+      return;
+    }
+
+    // =========================
+    // PHONE CHECK
+    // =========================
+
+    if (!isValidPhone(trimmedPhone)) {
+      setError(
+        "Please enter a valid 10-digit Indian mobile number starting with 6, 7, 8, or 9."
+      );
+      return;
+    }
+
+    // =========================
+    // PASSWORD CHECKS
+    // =========================
+
+    if (password.length < 8) {
+      setError("Password must contain at least 8 characters.");
+      return;
+    }
+
+    if (password.length > 64) {
+      setError("Password must not exceed 64 characters.");
+      return;
+    }
+
+    if (/\s/.test(password)) {
+      setError("Password must not contain spaces.");
+      return;
+    }
+
+    if (!/[A-Z]/.test(password)) {
+      setError("Password must contain at least one uppercase letter.");
+      return;
+    }
+
+    if (!/[a-z]/.test(password)) {
+      setError("Password must contain at least one lowercase letter.");
+      return;
+    }
+
+    if (!/[0-9]/.test(password)) {
+      setError("Password must contain at least one number.");
+      return;
+    }
+
+    if (!/[^A-Za-z0-9\s]/.test(password)) {
+      setError("Password must contain at least one special character.");
+      return;
+    }
+
+    // =========================
+    // WEAK PASSWORD CHECKS
+    // =========================
+
+    const normalizedName = trimmedName
+      .toLowerCase()
+      .replace(/[^a-z]/g, "");
+
+    const normalizedEmail = trimmedEmail
+      .split("@")[0]
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
+
+    const normalizedPassword = password.toLowerCase();
+
+    if (
+      normalizedPassword === "password" ||
+      normalizedPassword === "password123" ||
+      normalizedPassword === "12345678" ||
+      normalizedPassword === "123456789" ||
+      normalizedPassword === "qwerty123"
+    ) {
+      setError("Please choose a stronger password.");
+      return;
+    }
+
+    if (
+      normalizedName.length >= 3 &&
+      normalizedPassword.includes(normalizedName)
+    ) {
+      setError("Password should not contain your name.");
+      return;
+    }
+
+    if (
+      normalizedEmail.length >= 3 &&
+      normalizedPassword.includes(normalizedEmail)
+    ) {
+      setError("Password should not contain your email address.");
+      return;
+    }
+
+    // =========================
+    // CONFIRM PASSWORD
+    // =========================
 
     if (password !== confirmPassword) {
       setError("Passwords do not match.");
       return;
     }
 
+    // =========================
+    // API REQUEST
+    // =========================
+
     try {
       setLoading(true);
 
       const data = await registerUser({
-        name,
-        email,
+        name: trimmedName,
+        email: trimmedEmail,
         password,
         role: "patient",
-        phone_number: phoneNumber || null,
+        phone_number: trimmedPhone,
       });
 
-      // Save auth state through context, so ProtectedRoute picks it up
-      // immediately without needing a page reload.
+      // Save auth state through context
+      // so ProtectedRoute picks it up immediately.
       login(data.token, data.user);
 
-      navigate("/dashboard");
+      // ---- CHANGED: go to OTP verification instead of straight to dashboard ----
+      navigate("/verify-otp", {
+        state: { email: trimmedEmail, phone_number: trimmedPhone },
+      });
+      // ---------------------------------------------------------------------
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
@@ -171,7 +441,6 @@ function Register() {
 
               </div>
 
-
               {/* Health card */}
               <div className="register-floating-card register-health-card">
 
@@ -190,7 +459,6 @@ function Register() {
                 </div>
 
               </div>
-
 
               {/* Streak card */}
               <div className="register-floating-card register-streak-card">
@@ -218,7 +486,6 @@ function Register() {
             </div>
           </section>
 
-
           {/* ================= RIGHT REGISTER FORM ================= */}
           <section className="register-form-section">
 
@@ -233,14 +500,13 @@ function Register() {
                 </p>
               </div>
 
-
               <form onSubmit={handleSubmit}>
 
                 {/* Full Name */}
                 <div className="register-input-group">
 
                   <label htmlFor="name">
-                    Full Name
+                    Full Name <span className="register-required">*</span>
                   </label>
 
                   <div className="register-input-wrapper">
@@ -268,12 +534,11 @@ function Register() {
 
                 </div>
 
-
                 {/* Email */}
                 <div className="register-input-group">
 
                   <label htmlFor="register-email">
-                    Email Address
+                    Email Address <span className="register-required">*</span>
                   </label>
 
                   <div className="register-input-wrapper">
@@ -301,12 +566,11 @@ function Register() {
 
                 </div>
 
-
                 {/* Phone */}
                 <div className="register-input-group">
 
                   <label htmlFor="phone">
-                    Phone Number <span>(optional)</span>
+                    Phone Number <span className="register-required">*</span>
                   </label>
 
                   <div className="register-input-wrapper">
@@ -328,18 +592,19 @@ function Register() {
                       }}
                       disabled={loading}
                       autoComplete="tel"
+                      inputMode="numeric"
+                      maxLength={10}
                     />
 
                   </div>
 
                 </div>
 
-
                 {/* Password */}
                 <div className="register-input-group">
 
                   <label htmlFor="register-password">
-                    Password
+                    Password <span className="register-required">*</span>
                   </label>
 
                   <div className="register-input-wrapper register-password-wrapper">
@@ -379,21 +644,105 @@ function Register() {
 
                   </div>
 
-                </div>
+                  {/* Password requirements */}
+                  {password && (
+                    <div className="register-password-requirements">
 
+                      <div
+                        className={
+                          passwordChecks.minLength
+                            ? "password-check valid"
+                            : "password-check"
+                        }
+                      >
+                        <span>
+                          {passwordChecks.minLength ? "✓" : "○"}
+                        </span>
+                        <span>At least 8 characters</span>
+                      </div>
+
+                      <div
+                        className={
+                          passwordChecks.uppercase
+                            ? "password-check valid"
+                            : "password-check"
+                        }
+                      >
+                        <span>
+                          {passwordChecks.uppercase ? "✓" : "○"}
+                        </span>
+                        <span>One uppercase letter</span>
+                      </div>
+
+                      <div
+                        className={
+                          passwordChecks.lowercase
+                            ? "password-check valid"
+                            : "password-check"
+                        }
+                      >
+                        <span>
+                          {passwordChecks.lowercase ? "✓" : "○"}
+                        </span>
+                        <span>One lowercase letter</span>
+                      </div>
+
+                      <div
+                        className={
+                          passwordChecks.number
+                            ? "password-check valid"
+                            : "password-check"
+                        }
+                      >
+                        <span>
+                          {passwordChecks.number ? "✓" : "○"}
+                        </span>
+                        <span>One number</span>
+                      </div>
+
+                      <div
+                        className={
+                          passwordChecks.special
+                            ? "password-check valid"
+                            : "password-check"
+                        }
+                      >
+                        <span>
+                          {passwordChecks.special ? "✓" : "○"}
+                        </span>
+                        <span>One special character</span>
+                      </div>
+
+                      <div
+                        className={
+                          passwordChecks.noSpaces
+                            ? "password-check valid"
+                            : "password-check"
+                        }
+                      >
+                        <span>
+                          {passwordChecks.noSpaces ? "✓" : "○"}
+                        </span>
+                        <span>No spaces</span>
+                      </div>
+
+                    </div>
+                  )}
+
+                </div>
 
                 {/* Confirm Password */}
                 <div className="register-input-group">
 
                   <label htmlFor="confirm-password">
-                    Confirm Password
+                    Confirm Password <span className="register-required">*</span>
                   </label>
 
                   <div className="register-input-wrapper register-password-wrapper">
 
                     <span className="register-input-icon">
                       <svg viewBox="0 0 24 24" aria-hidden="true">
-                        <path d="M17 8h-1V6a4 4 0 0 0-8 0v2H7a3 3 0 0 0-3 3v7a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-7a3 3 0 0 0-3-3Zm-7-2a2 2 0 0 1 4 0v2h-4V6Zm7 12H7v-7H7v7Z" />
+                        <path d="M17 8h-1V6a4 4 0 0 0-8 0v2H7a3 3 0 0 0-3 3v7a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-7a3 3 0 0 0-3-3Zm-7-2a2 2 0 0 1 4 0v2h-4V6Zm7 12H7v-7h10v7Z" />
                       </svg>
                     </span>
 
@@ -434,8 +783,22 @@ function Register() {
 
                   </div>
 
-                </div>
+                  {/* Confirm password live status */}
+                  {confirmPassword && (
+                    <div
+                      className={
+                        password === confirmPassword
+                          ? "register-password-match valid"
+                          : "register-password-match"
+                      }
+                    >
+                      {password === confirmPassword
+                        ? "✓ Passwords match"
+                        : "Passwords do not match"}
+                    </div>
+                  )}
 
+                </div>
 
                 {/* Error */}
                 {error && (
@@ -447,7 +810,6 @@ function Register() {
                     <span>{error}</span>
                   </div>
                 )}
-
 
                 {/* Submit */}
                 <button
@@ -466,7 +828,6 @@ function Register() {
                 </button>
 
               </form>
-
 
               {/* Security */}
               <div className="register-security-note">

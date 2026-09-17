@@ -221,9 +221,7 @@ function Login() {
                     <button
                       type="button"
                       className="forgot-password"
-                      onClick={() => {
-                        // Forgot password functionality can be added later
-                      }}
+                      onClick={() => navigate("/forgot-password")}
                     >
                       Forgot Password?
                     </button>

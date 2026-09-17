@@ -8,7 +8,7 @@ export interface User {
 export interface AuthResponse {
   message: string;
   token: string;
-  users: User;
+  user: User;
 }
 
 const API_URL = "http://localhost:5000/api";
@@ -157,5 +157,113 @@ export async function getMedicines(): Promise<
     throw new Error(data.message || "Failed to fetch medicines");
   }
 
+  return data;
+}
+
+// =========================================================
+// NEW: EMAIL OTP VERIFICATION
+// =========================================================
+
+export async function sendEmailOtp(email: string): Promise<{ message: string }> {
+  const response = await fetch(`${API_URL}/auth/send-email-otp`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to send email OTP");
+  }
+  return data;
+}
+
+export async function verifyEmailOtp(
+  email: string,
+  otp: string
+): Promise<{ message: string }> {
+  const response = await fetch(`${API_URL}/auth/verify-email-otp`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, otp }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || "Incorrect OTP");
+  }
+  return data;
+}
+
+// =========================================================
+// NEW: PHONE OTP VERIFICATION
+// =========================================================
+
+export async function sendPhoneOtp(
+  phone_number: string
+): Promise<{ message: string }> {
+  const response = await fetch(`${API_URL}/auth/send-phone-otp`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ phone_number }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to send phone OTP");
+  }
+  return data;
+}
+
+export async function verifyPhoneOtp(
+  phone_number: string,
+  otp: string
+): Promise<{ message: string }> {
+  const response = await fetch(`${API_URL}/auth/verify-phone-otp`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ phone_number, otp }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || "Incorrect OTP");
+  }
+  return data;
+}
+
+// =========================================================
+// NEW: FORGOT PASSWORD (email OTP based)
+// =========================================================
+
+export async function forgotPassword(email: string): Promise<{ message: string }> {
+  const response = await fetch(`${API_URL}/auth/forgot-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to send reset code");
+  }
+  return data;
+}
+
+export async function resetPassword(
+  email: string,
+  otp: string,
+  newPassword: string
+): Promise<{ message: string }> {
+  const response = await fetch(`${API_URL}/auth/reset-password`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, otp, newPassword }),
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to reset password");
+  }
   return data;
 }
