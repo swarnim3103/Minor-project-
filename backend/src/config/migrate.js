@@ -1,7 +1,7 @@
-
 require('dotenv').config();
 
 const pool = require('./db');
+
 async function migrate() {
   try {
     console.log('Starting database migration...');
@@ -14,11 +14,102 @@ async function migrate() {
         email VARCHAR(255) NOT NULL UNIQUE,
         password_hash VARCHAR(255) NOT NULL,
         phone VARCHAR(20),
+
+        -- Email verification
+        is_email_verified TINYINT(1) NOT NULL DEFAULT 0,
+        email_otp VARCHAR(6) NULL,
+        email_otp_expiry DATETIME NULL,
+
+        -- Phone verification
+        is_phone_verified TINYINT(1) NOT NULL DEFAULT 0,
+        phone_otp VARCHAR(6) NULL,
+        phone_otp_expiry DATETIME NULL,
+
+        -- Forgot password
+        reset_otp VARCHAR(6) NULL,
+        reset_otp_expiry DATETIME NULL,
+
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
 
-    console.log('Users table created.');
+    console.log('Users table created/checked.');
+
+    // 1.1 Make sure OTP columns exist in an already-existing users table
+    // This is important because CREATE TABLE IF NOT EXISTS does not
+    // modify an existing table.
+
+    const [userColumns] = await pool.query(`
+      SHOW COLUMNS FROM users
+    `);
+
+    const existingColumns = userColumns.map((column) => column.Field);
+
+    if (!existingColumns.includes('is_email_verified')) {
+      await pool.query(`
+        ALTER TABLE users
+        ADD COLUMN is_email_verified TINYINT(1) NOT NULL DEFAULT 0
+      `);
+      console.log('Added is_email_verified.');
+    }
+
+    if (!existingColumns.includes('is_phone_verified')) {
+      await pool.query(`
+        ALTER TABLE users
+        ADD COLUMN is_phone_verified TINYINT(1) NOT NULL DEFAULT 0
+      `);
+      console.log('Added is_phone_verified.');
+    }
+
+    if (!existingColumns.includes('email_otp')) {
+      await pool.query(`
+        ALTER TABLE users
+        ADD COLUMN email_otp VARCHAR(6) NULL
+      `);
+      console.log('Added email_otp.');
+    }
+
+    if (!existingColumns.includes('email_otp_expiry')) {
+      await pool.query(`
+        ALTER TABLE users
+        ADD COLUMN email_otp_expiry DATETIME NULL
+      `);
+      console.log('Added email_otp_expiry.');
+    }
+
+    if (!existingColumns.includes('phone_otp')) {
+      await pool.query(`
+        ALTER TABLE users
+        ADD COLUMN phone_otp VARCHAR(6) NULL
+      `);
+      console.log('Added phone_otp.');
+    }
+
+    if (!existingColumns.includes('phone_otp_expiry')) {
+      await pool.query(`
+        ALTER TABLE users
+        ADD COLUMN phone_otp_expiry DATETIME NULL
+      `);
+      console.log('Added phone_otp_expiry.');
+    }
+
+    if (!existingColumns.includes('reset_otp')) {
+      await pool.query(`
+        ALTER TABLE users
+        ADD COLUMN reset_otp VARCHAR(6) NULL
+      `);
+      console.log('Added reset_otp.');
+    }
+
+    if (!existingColumns.includes('reset_otp_expiry')) {
+      await pool.query(`
+        ALTER TABLE users
+        ADD COLUMN reset_otp_expiry DATETIME NULL
+      `);
+      console.log('Added reset_otp_expiry.');
+    }
+
+    console.log('OTP and password-reset columns checked.');
 
     // 2. Medicines
     await pool.query(`
@@ -40,7 +131,7 @@ async function migrate() {
       )
     `);
 
-    console.log('Medicines table created.');
+    console.log('Medicines table created/checked.');
 
     // 3. Prescriptions
     await pool.query(`
@@ -59,7 +150,7 @@ async function migrate() {
       )
     `);
 
-    console.log('Prescriptions table created.');
+    console.log('Prescriptions table created/checked.');
 
     // 4. Reminders
     await pool.query(`
@@ -85,7 +176,7 @@ async function migrate() {
       )
     `);
 
-    console.log('Reminders table created.');
+    console.log('Reminders table created/checked.');
 
     // 5. Reminder Logs
     await pool.query(`
@@ -104,7 +195,7 @@ async function migrate() {
       )
     `);
 
-    console.log('Reminder logs table created.');
+    console.log('Reminder logs table created/checked.');
 
     console.log('Database migration completed successfully.');
 
