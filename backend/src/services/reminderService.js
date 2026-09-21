@@ -4,10 +4,16 @@ const pool = require('../config/db');
 const RETRY_INTERVAL_MIN = Number(process.env.CALL_RETRY_INTERVAL_MINUTES) || 15;
 const MAX_ATTEMPTS = Number(process.env.CALL_RETRY_MAX_ATTEMPTS) || 3;
 
+const TERMINAL_STATUSES = ['completed', 'no_answer', 'busy', 'failed'];
+
 const gateway = getCallGateway();
 
 gateway.onStatus(async (event) => {
   console.log('[ReminderService] Call status event:', event);
+
+  if (!TERMINAL_STATUSES.includes(event.status)) {
+    return; // 'ringing' / 'connected' are just progress events, not a logged outcome
+  }
 
   await pool.query(
     `INSERT INTO reminder_logs (reminder_id, attempt_number, status, attempted_at, error_message)

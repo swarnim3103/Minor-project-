@@ -38,10 +38,22 @@ async function register(req, res) {
     const user = { id: result.insertId, email, role: role || 'patient' };
     const token = generateToken(user);
 
+    // Fire off email + phone OTPs right after account creation.
+    // Don't fail registration if OTP sending has an issue - the user
+    // can hit "resend" from the verify-otp page.
+    try {
+      await otpService.sendEmailOtp(email);
+      if (phone_number) {
+        await otpService.sendPhoneOtp(phone_number);
+      }
+    } catch (otpErr) {
+      console.error('[auth.register] OTP send error:', otpErr.message);
+    }
+
     return res.status(201).json({
       message: 'Registered successfully',
       token,
-      user: { id: user.id, name, email, role: user.role },
+      users: { id: user.id, name, email, role: user.role },
     });
   } catch (err) {
     console.error('[auth.register] error:', err);
@@ -74,7 +86,7 @@ async function login(req, res) {
     return res.json({
       message: 'Login successful',
       token,
-      user: { id: user.id, name: user.name, email: user.email, role: user.role },
+      users: { id: user.id, name: user.name, email: user.email, role: user.role },
     });
   } catch (err) {
     console.error('[auth.login] error:', err);
@@ -92,7 +104,7 @@ async function getProfile(req, res) {
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    return res.json({ user });
+    return res.json({ users: user });
   } catch (err) {
     console.error('[auth.getProfile] error:', err);
     return res.status(500).json({ error: 'Something went wrong fetching profile' });
