@@ -1,211 +1,189 @@
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+const axios = require('axios');
 const pool = require('../config/db');
-const otpService = require('../services/otpService');
+const { generateOtp, getOtpExpiry, isOtpExpired } = require('../utils/otp.util');
+const { sendSmsOtp } = require('../utils/sms.util');
+const { sendEmail, otpEmailTemplate } = require('../utils/mailer.util');
 
-function generateToken(user) {
-  return jwt.sign(
-    { id: user.id, role: user.role, email: user.email },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+const OTP_EXPIRY_MINUTES = 5;
+
+async function sendEmailOtp(email) {
+  const otp = generateOtp();
+  const expiry = getOtpExpiry(OTP_EXPIRY_MINUTES);
+
+  const [result] = await pool.query(
+    'UPDATE users SET email_otp = ?, email_otp_expiry = ? WHERE email = ?',
+    [otp, expiry, email]
+  );
+
+  if (result.affectedRows === 0) {
+    throw new Error('No account found with this email');
+  }
+
+  await sendEmail(email, 'Your MedCare verification code', otpEmailTemplate(otp, 'verify your email'));
+
+  return { otp };
+}
+
+async function verifyEmailOtp(email, submittedOtp) {
+  const [rows] = await pool.query(
+    'SELECT email_otp, email_otp_expiry FROM users WHERE email = ?',
+    [email]
+  );
+  const user = rows[0];
+
+  if (!user || !user.email_otp) {
+    throw new Error('No OTP found. Please request a new one.');
+  }
+  if (isOtpExpired(user.email_otp_expiry)) {
+    throw new Error('OTP expired. Please request a new one.');
+  }
+  if (user.email_otp !== submittedOtp) {
+    throw new Error('Incorrect OTP.');
+  }
+
+  await pool.query(
+    'UPDATE users SET is_email_verified = 1, email_otp = NULL, email_otp_expiry = NULL WHERE email = ?',
+    [email]
   );
 }
 
-// =========================================================
-// REGISTER / LOGIN / PROFILE
-// =========================================================
+async function sendPhoneOtp(phoneNumber) {
+  const otp = generateOtp();
+  const expiry = getOtpExpiry(OTP_EXPIRY_MINUTES);
 
-async function register(req, res) {
+  const [result] = await pool.query(
+    'UPDATE users SET phone_otp = ?, phone_otp_expiry = ? WHERE phone_number = ?',
+    [otp, expiry, phoneNumber]
+  );
+
+  if (result.affectedRows === 0) {
+    throw new Error('No account found with this phone number');
+  }
+
   try {
-    const { name, email, password, role, phone_number } = req.body;
-
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: 'name, email, and password are required' });
-    }
-
-    const [existing] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
-    if (existing.length > 0) {
-      return res.status(409).json({ error: 'Email already registered' });
-    }
-
-    const passwordHash = await bcrypt.hash(password, 10);
-
-    const [result] = await pool.query(
-      'INSERT INTO users (name, email, password_hash, role, phone_number) VALUES (?, ?, ?, ?, ?)',
-      [name, email, passwordHash, role || 'patient', phone_number || null]
-    );
-
-    const user = { id: result.insertId, email, role: role || 'patient' };
-    const token = generateToken(user);
-
-    // Fire off email + phone OTPs right after account creation.
-    // Don't fail registration if OTP sending has an issue - the user
-    // can hit "resend" from the verify-otp page.
-    try {
-      await otpService.sendEmailOtp(email);
-      if (phone_number) {
-        await otpService.sendPhoneOtp(phone_number);
-      }
-    } catch (otpErr) {
-      console.error('[auth.register] OTP send error:', otpErr.message);
-    }
-
-    return res.status(201).json({
-      message: 'Registered successfully',
-      token,
-      users: { id: user.id, name, email, role: user.role },
+    await axios.post(`${process.env.PHONE_GATEWAY_URL}/send-sms`, {
+      number: phoneNumber,
+      message: `Your MedCare verification code is ${otp}. It expires in ${OTP_EXPIRY_MINUTES} minutes.`,
     });
+    console.log(`[PHONE OTP] Sent to ${phoneNumber}`);
   } catch (err) {
-    console.error('[auth.register] error:', err);
-    return res.status(500).json({ error: 'Something went wrong during registration' });
+    console.error('[PHONE OTP] Failed to send via phone gateway:', err.message);
+    throw new Error('Could not send OTP SMS - is the phone gateway running?');
   }
 }
 
-async function login(req, res) {
-  try {
-    const { email, password } = req.body;
+async function verifyPhoneOtp(phoneNumber, submittedOtp) {
+  const [rows] = await pool.query(
+    'SELECT phone_otp, phone_otp_expiry FROM users WHERE phone_number = ?',
+    [phoneNumber]
+  );
+  const user = rows[0];
 
-    if (!email || !password) {
-      return res.status(400).json({ error: 'email and password are required' });
-    }
-
-    const [rows] = await pool.query('SELECT * FROM users WHERE email = ?', [email]);
-    const user = rows[0];
-
-    if (!user) {
-      return res.status(401).json({ error: 'Invalid email or password' });
-    }
-
-    const isMatch = await bcrypt.compare(password, user.password_hash);
-    if (!isMatch) {
-      return res.status(401).json({ error: 'Invalid email or password' });
-    }
-
-    const token = generateToken(user);
-
-    return res.json({
-      message: 'Login successful',
-      token,
-      users: { id: user.id, name: user.name, email: user.email, role: user.role },
-    });
-  } catch (err) {
-    console.error('[auth.login] error:', err);
-    return res.status(500).json({ error: 'Something went wrong during login' });
+  if (!user || !user.phone_otp) {
+    throw new Error('No OTP found. Please request a new one.');
   }
+  if (isOtpExpired(user.phone_otp_expiry)) {
+    throw new Error('OTP expired. Please request a new one.');
+  }
+  if (user.phone_otp !== submittedOtp) {
+    throw new Error('Incorrect OTP.');
+  }
+
+  await pool.query(
+    'UPDATE users SET is_phone_verified = 1, phone_otp = NULL, phone_otp_expiry = NULL WHERE phone_number = ?',
+    [phoneNumber]
+  );
 }
 
-async function getProfile(req, res) {
-  try {
-    const [rows] = await pool.query(
-      'SELECT id, name, email, role, phone_number, created_at FROM users WHERE id = ?',
-      [req.user.id]
-    );
-    const user = rows[0];
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-    return res.json({ users: user });
-  } catch (err) {
-    console.error('[auth.getProfile] error:', err);
-    return res.status(500).json({ error: 'Something went wrong fetching profile' });
+async function createAndSendOtp(userId, phoneNumber) {
+  const otp = generateOtp();
+  const expiresAt = getOtpExpiry(OTP_EXPIRY_MINUTES);
+
+  const [result] = await pool.query(
+    'UPDATE users SET phone_otp = ?, phone_otp_expiry = ? WHERE id = ?',
+    [otp, expiresAt, userId]
+  );
+
+  if (result.affectedRows === 0) {
+    throw new Error('User not found');
   }
+
+  await sendSmsOtp(phoneNumber, otp);
+
+  return { expiresAt };
 }
 
-// =========================================================
-// EMAIL OTP
-// =========================================================
+async function verifyOtp(userId, submittedOtp) {
+  const [rows] = await pool.query(
+    'SELECT phone_otp, phone_otp_expiry FROM users WHERE id = ?',
+    [userId]
+  );
+  const user = rows[0];
 
-async function sendEmailOtp(req, res) {
-  try {
-    const { email } = req.body;
-    if (!email) return res.status(400).json({ error: 'email is required' });
-
-    await otpService.sendEmailOtp(email);
-    return res.json({ message: 'OTP sent to your email' });
-  } catch (err) {
-    return res.status(400).json({ error: err.message });
+  if (!user || !user.phone_otp) {
+    return { success: false, reason: 'No OTP found. Please request a new one.' };
   }
+  if (isOtpExpired(user.phone_otp_expiry)) {
+    return { success: false, reason: 'OTP expired. Please request a new one.' };
+  }
+  if (user.phone_otp !== submittedOtp) {
+    return { success: false, reason: 'Incorrect OTP.' };
+  }
+
+  await pool.query(
+    'UPDATE users SET is_phone_verified = 1, phone_otp = NULL, phone_otp_expiry = NULL WHERE id = ?',
+    [userId]
+  );
+
+  return { success: true };
 }
 
-async function verifyEmailOtpHandler(req, res) {
-  try {
-    const { email, otp } = req.body;
-    if (!email || !otp) return res.status(400).json({ error: 'email and otp are required' });
+async function sendResetOtp(email) {
+  const otp = generateOtp();
+  const expiry = getOtpExpiry(OTP_EXPIRY_MINUTES);
 
-    await otpService.verifyEmailOtp(email, otp);
-    return res.json({ message: 'Email verified successfully' });
-  } catch (err) {
-    return res.status(400).json({ error: err.message });
+  const [result] = await pool.query(
+    'UPDATE users SET reset_otp = ?, reset_otp_expiry = ? WHERE email = ?',
+    [otp, expiry, email]
+  );
+
+  if (result.affectedRows === 0) {
+    throw new Error('No account found with this email');
   }
+
+  await sendEmail(email, 'Your MedCare password reset code', otpEmailTemplate(otp, 'reset your password'));
 }
 
-// =========================================================
-// PHONE OTP
-// =========================================================
+async function verifyResetOtpAndSetPassword(email, submittedOtp, newPasswordHash) {
+  const [rows] = await pool.query(
+    'SELECT reset_otp, reset_otp_expiry FROM users WHERE email = ?',
+    [email]
+  );
+  const user = rows[0];
 
-async function sendPhoneOtpHandler(req, res) {
-  try {
-    const { phone_number } = req.body;
-    if (!phone_number) return res.status(400).json({ error: 'phone_number is required' });
-
-    await otpService.sendPhoneOtp(phone_number);
-    return res.json({ message: 'OTP sent to your phone' });
-  } catch (err) {
-    return res.status(400).json({ error: err.message });
+  if (!user || !user.reset_otp) {
+    throw new Error('No reset request found. Please request a new one.');
   }
-}
-
-async function verifyPhoneOtpHandler(req, res) {
-  try {
-    const { phone_number, otp } = req.body;
-    if (!phone_number || !otp) return res.status(400).json({ error: 'phone_number and otp are required' });
-
-    await otpService.verifyPhoneOtp(phone_number, otp);
-    return res.json({ message: 'Phone verified successfully' });
-  } catch (err) {
-    return res.status(400).json({ error: err.message });
+  if (isOtpExpired(user.reset_otp_expiry)) {
+    throw new Error('Code expired. Please request a new one.');
   }
-}
-
-// =========================================================
-// FORGOT / RESET PASSWORD
-// =========================================================
-
-async function forgotPasswordHandler(req, res) {
-  try {
-    const { email } = req.body;
-    if (!email) return res.status(400).json({ error: 'email is required' });
-
-    await otpService.sendResetOtp(email);
-    return res.json({ message: 'Password reset code sent to your email' });
-  } catch (err) {
-    return res.status(400).json({ error: err.message });
+  if (user.reset_otp !== submittedOtp) {
+    throw new Error('Incorrect code.');
   }
-}
 
-async function resetPasswordHandler(req, res) {
-  try {
-    const { email, otp, newPassword } = req.body;
-    if (!email || !otp || !newPassword) {
-      return res.status(400).json({ error: 'email, otp, and newPassword are required' });
-    }
-
-    const newPasswordHash = await bcrypt.hash(newPassword, 10);
-    await otpService.verifyResetOtpAndSetPassword(email, otp, newPasswordHash);
-    return res.json({ message: 'Password reset successfully' });
-  } catch (err) {
-    return res.status(400).json({ error: err.message });
-  }
+  await pool.query(
+    'UPDATE users SET password_hash = ?, reset_otp = NULL, reset_otp_expiry = NULL WHERE email = ?',
+    [newPasswordHash, email]
+  );
 }
 
 module.exports = {
-  register,
-  login,
-  getProfile,
   sendEmailOtp,
-  verifyEmailOtp: verifyEmailOtpHandler,
-  sendPhoneOtp: sendPhoneOtpHandler,
-  verifyPhoneOtp: verifyPhoneOtpHandler,
-  forgotPassword: forgotPasswordHandler,
-  resetPassword: resetPasswordHandler,
+  verifyEmailOtp,
+  sendPhoneOtp,
+  verifyPhoneOtp,
+  createAndSendOtp,
+  verifyOtp,
+  sendResetOtp,
+  verifyResetOtpAndSetPassword,
 };
