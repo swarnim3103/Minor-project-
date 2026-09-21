@@ -1,0 +1,90 @@
+[
+  {
+    "id": "metformin-001",
+    "medicine": "Metformin",
+    "topic": "Uses",
+    "content": "Metformin is a medicine commonly used to help control high blood sugar levels in people with type 2 diabetes. It may be used alone or with other diabetes medicines.",
+    "source": "MedlinePlus",
+    "source_url": "https://medlineplus.gov/druginfo/meds/a696005.html"
+  },
+  {
+    "id": "metformin-002",
+    "medicine": "Metformin",
+    "topic": "Common side effects",
+    "content": "Common side effects of metformin can include diarrhea, nausea, stomach discomfort, gas, indigestion, weakness, and changes in taste. Taking metformin with meals may help reduce some stomach-related side effects.",
+    "source": "MedlinePlus",
+    "source_url": "https://medlineplus.gov/druginfo/meds/a696005.html"
+  },
+  {
+    "id": "metformin-003",
+    "medicine": "Metformin",
+    "topic": "Warnings",
+    "content": "Metformin has important precautions and may not be appropriate for some people with certain kidney or other medical problems. Patients should discuss their medical history and other medicines with their healthcare professional.",
+    "source": "MedlinePlus",
+    "source_url": "https://medlineplus.gov/druginfo/meds/a696005.html"
+  },
+  {
+    "id": "metformin-004",
+    "medicine": "Metformin",
+    "topic": "Missed dose",
+    "content": "If a dose of metformin is missed, the patient should follow the instructions provided with the medicine and should not take a double dose to make up for a missed dose unless specifically instructed by a healthcare professional.",
+    "source": "MedlinePlus",
+    "source_url": "https://medlineplus.gov/druginfo/meds/a696005.html"
+  },
+  {
+    "id": "paracetamol-001",
+    "medicine": "Paracetamol",
+    "topic": "Uses",
+    "content": "Paracetamol, also called acetaminophen, is used to relieve mild to moderate pain and to reduce fever.",
+    "source": "NHS",
+    "source_url": "https://www.nhs.uk/medicines/paracetamol-for-adults/"
+  },
+  {
+    "id": "paracetamol-002",
+    "medicine": "Paracetamol",
+    "topic": "Warnings",
+    "content": "Taking more paracetamol than recommended can cause serious liver damage. Patients should carefully check other medicines because some combination products may also contain paracetamol.",
+    "source": "NHS",
+    "source_url": "https://www.nhs.uk/medicines/paracetamol-for-adults/"
+  },
+  {
+    "id": "paracetamol-003",
+    "medicine": "Paracetamol",
+    "topic": "Missed dose",
+    "content": "For occasional use of paracetamol, a missed dose generally does not mean that a double dose should be taken. Follow the product instructions or advice from a healthcare professional.",
+    "source": "NHS",
+    "source_url": "https://www.nhs.uk/medicines/paracetamol-for-adults/"
+  },
+  {
+    "id": "ibuprofen-001",
+    "medicine": "Ibuprofen",
+    "topic": "Uses",
+    "content": "Ibuprofen is a non-steroidal anti-inflammatory drug used to relieve pain and reduce inflammation and fever.",
+    "source": "NHS",
+    "source_url": "https://www.nhs.uk/medicines/ibuprofen-for-adults/"
+  },
+  {
+    "id": "ibuprofen-002",
+    "medicine": "Ibuprofen",
+    "topic": "Common side effects",
+    "content": "Common side effects of ibuprofen can include indigestion, stomach pain, nausea, vomiting, headache, dizziness, and diarrhea.",
+    "source": "NHS",
+    "source_url": "https://www.nhs.uk/medicines/ibuprofen-for-adults/"
+  },
+  {
+    "id": "ibuprofen-003",
+    "medicine": "Ibuprofen",
+    "topic": "Warnings",
+    "content": "Ibuprofen may not be suitable for some people, including people with certain stomach ulcers, kidney problems, heart problems, or previous allergic reactions to NSAIDs. It can also interact with some medicines.",
+    "source": "NHS",
+    "source_url": "https://www.nhs.uk/medicines/ibuprofen-for-adults/"
+  },
+  {
+    "id": "general-001",
+    "medicine": "General",
+    "topic": "Medication safety",
+    "content": "Medicines should be taken according to the instructions provided by a healthcare professional or the official medicine information. Do not change the dose or stop a prescribed medicine without discussing it with a healthcare professional.",
+    "source": "NHS",
+    "source_url": "https://www.nhs.uk/conditions/medicines-information/"
+  }
+]

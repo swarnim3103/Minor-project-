@@ -1,12 +1,27 @@
+
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { SendIcon, SparkleIcon, UserIcon } from "../components/icons";
 import "../styles/shared.css";
 import "./Chatbot.css";
 
+interface ChatSource {
+  medicine: string;
+  topic: string;
+  source: string;
+  source_url: string;
+  similarity: number;
+}
+
 interface ChatMessage {
   id: number;
   sender: "user" | "bot";
   text: string;
+  sources?: ChatSource[];
+}
+
+interface ChatResponse {
+  answer: string;
+  sources: ChatSource[];
 }
 
 const initialMessages: ChatMessage[] = [
@@ -18,17 +33,29 @@ const initialMessages: ChatMessage[] = [
   },
 ];
 
-// TODO: replace with a real call to POST /api/chatbot, which will
-// proxy to the Gemini API on the backend.
-function getMockReply(question: string): string {
-  const q = question.toLowerCase();
-  if (q.includes("metformin")) {
-    return "Metformin is commonly used to manage blood sugar in type 2 diabetes. It's often taken with food to reduce stomach upset. Common side effects include nausea and mild digestive discomfort. This is general information only — please confirm dosage and suitability with your doctor.";
+async function sendChatMessage(message: string): Promise<ChatResponse> {
+  const token = localStorage.getItem("token");
+
+  const response = await fetch("http://localhost:5000/api/chat", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      message,
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data.message || data.error || "Failed to get a response from the chatbot."
+    );
   }
-  if (q.includes("side effect")) {
-    return "Side effects vary by medicine and person. Common ones include mild nausea, drowsiness, or headache, but some medicines carry more serious risks. Let me know which medicine you're asking about, and always report new or severe symptoms to your doctor.";
-  }
-  return "That's a good question. I can share general educational information about medicine uses, side effects, and precautions, but for anything specific to your health, please consult your doctor or pharmacist.";
+
+  return data;
 }
 
 function Chatbot() {
@@ -41,23 +68,50 @@ function Chatbot() {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    const text = input.trim();
-    if (!text) return;
 
-    const userMessage: ChatMessage = { id: Date.now(), sender: "user", text };
+    const text = input.trim();
+
+    if (!text || isTyping) return;
+
+    const userMessage: ChatMessage = {
+      id: Date.now(),
+      sender: "user",
+      text,
+    };
+
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsTyping(true);
 
-    setTimeout(() => {
-      setMessages((prev) => [
-        ...prev,
-        { id: Date.now() + 1, sender: "bot", text: getMockReply(text) },
-      ]);
+    try {
+      const data = await sendChatMessage(text);
+
+      const botMessage: ChatMessage = {
+        id: Date.now() + 1,
+        sender: "bot",
+        text: data.answer,
+        sources: data.sources,
+      };
+
+      setMessages((prev) => [...prev, botMessage]);
+    } catch (error) {
+      console.error("Chatbot error:", error);
+
+      const errorMessage: ChatMessage = {
+        id: Date.now() + 1,
+        sender: "bot",
+        text:
+          error instanceof Error
+            ? error.message
+            : "Sorry, I couldn't connect to the medical assistant. Please try again.",
+      };
+
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsTyping(false);
-    }, 700);
+    }
   }
 
   return (
@@ -65,18 +119,51 @@ function Chatbot() {
       <div className="page-header">
         <div>
           <h2>AI Chatbot</h2>
-          <p>Educational information only — not a substitute for professional medical advice.</p>
+          <p>
+            Educational information only — not a substitute for professional
+            medical advice.
+          </p>
         </div>
       </div>
 
       <div className="chatbot-window">
         <div className="chatbot-messages">
           {messages.map((m) => (
-            <div key={m.id} className={`chatbot-message chatbot-message-${m.sender}`}>
+            <div
+              key={m.id}
+              className={`chatbot-message chatbot-message-${m.sender}`}
+            >
               <div className="chatbot-avatar">
-                {m.sender === "bot" ? <SparkleIcon width={16} height={16} /> : <UserIcon width={16} height={16} />}
+                {m.sender === "bot" ? (
+                  <SparkleIcon width={16} height={16} />
+                ) : (
+                  <UserIcon width={16} height={16} />
+                )}
               </div>
-              <div className="chatbot-bubble">{m.text}</div>
+
+              <div>
+                <div className="chatbot-bubble">{m.text}</div>
+
+                {m.sender === "bot" &&
+                  m.sources &&
+                  m.sources.length > 0 && (
+                    <div className="chatbot-sources">
+                      <strong>Sources:</strong>
+
+                      {m.sources.map((source, index) => (
+                        <a
+                          key={index}
+                          href={source.source_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="chatbot-source"
+                        >
+                          {source.source} — {source.medicine} ({source.topic})
+                        </a>
+                      ))}
+                    </div>
+                  )}
+              </div>
             </div>
           ))}
 
@@ -85,6 +172,7 @@ function Chatbot() {
               <div className="chatbot-avatar">
                 <SparkleIcon width={16} height={16} />
               </div>
+
               <div className="chatbot-bubble chatbot-typing">
                 <span />
                 <span />
@@ -101,8 +189,14 @@ function Chatbot() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask about a medicine, its uses, or side effects..."
+            disabled={isTyping}
           />
-          <button type="submit" className="btn btn-primary" disabled={!input.trim()}>
+
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={!input.trim() || isTyping}
+          >
             <SendIcon width={16} height={16} />
           </button>
         </form>

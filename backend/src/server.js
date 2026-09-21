@@ -18,6 +18,8 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use("/api/medicines", medicineRoutes);
 app.use('/api/otp', otpRoutes);
 app.use('/api/reminders', reminderRoutes);
+const chatRoutes = require("./routes/chat.routes");
+app.use('/api/chat', chatRoutes);
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 app.get('/test-db', async (req, res) => {
   try {

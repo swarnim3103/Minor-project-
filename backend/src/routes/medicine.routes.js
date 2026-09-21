@@ -6,4 +6,6 @@ const router = express.Router();
 
 router.post("/", authenticate, addMedicine);
 router.get("/", authenticate, getMedicines);
+router.put("/:id", authenticate, updateMedicine);
+router.delete("/:id", authenticate, deleteMedicine);
 module.exports = router;

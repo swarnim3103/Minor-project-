@@ -165,27 +165,53 @@ async function migrate() {
 
     // 4. Reminders
     await pool.query(`
-      CREATE TABLE IF NOT EXISTS reminders (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        medicine_id INT NOT NULL,
-        reminder_time TIME NOT NULL,
-        start_date DATE,
-        end_date DATE,
-        status ENUM('active', 'inactive') DEFAULT 'active',
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  CREATE TABLE IF NOT EXISTS reminders (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    medicine_id INT NOT NULL,
+    reminder_time TIME NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    frequency ENUM('daily', 'weekly') NOT NULL DEFAULT 'daily',
+    day_of_week TINYINT NULL,
+    status ENUM('active', 'inactive') DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
-        CONSTRAINT fk_reminders_user
-          FOREIGN KEY (user_id)
-          REFERENCES users(id)
-          ON DELETE CASCADE,
+    FOREIGN KEY (user_id)
+      REFERENCES users(id)
+      ON DELETE CASCADE,
 
-        CONSTRAINT fk_reminders_medicine
-          FOREIGN KEY (medicine_id)
-          REFERENCES medicines(id)
-          ON DELETE CASCADE
-      )
-    `);
+    FOREIGN KEY (medicine_id)
+      REFERENCES medicines(id)
+      ON DELETE CASCADE
+  )
+`);
+
+const [reminderColumns] = await pool.query(
+  `SHOW COLUMNS FROM reminders`
+);
+
+const existingReminderColumns =
+  reminderColumns.map((column) => column.Field);
+
+if (!existingReminderColumns.includes("frequency")) {
+  await pool.query(`
+    ALTER TABLE reminders
+    ADD COLUMN frequency ENUM('daily', 'weekly')
+    NOT NULL DEFAULT 'daily'
+  `);
+
+  console.log("Added reminders.frequency");
+}
+
+if (!existingReminderColumns.includes("day_of_week")) {
+  await pool.query(`
+    ALTER TABLE reminders
+    ADD COLUMN day_of_week TINYINT NULL
+  `);
+
+  console.log("Added reminders.day_of_week");
+}
 
     console.log('Reminders table created/checked.');
 
