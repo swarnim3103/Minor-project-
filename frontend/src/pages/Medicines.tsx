@@ -204,10 +204,7 @@ function Medicines() {
             Add your first medicine to start getting reminders.
           </p>
 
-          <button className="btn btn-primary" onClick={openAddModal}>
-            <PlusIcon width={16} height={16} />
-            Add Medicine
-          </button>
+          
         </div>
       ) : (
         <div className="card-grid">
