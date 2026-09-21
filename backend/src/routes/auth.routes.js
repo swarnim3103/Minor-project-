@@ -3,6 +3,9 @@ const router = express.Router();
 const authController = require('../controllers/auth.controller');
 const { authenticate } = require('../middleware/auth');
 
+console.log('authController keys:', Object.keys(authController));
+console.log('register is:', typeof authController.register);
+
 router.post('/register', authController.register);
 router.post('/login', authController.login);
 router.get('/me', authenticate, authController.getProfile);
