@@ -9,107 +9,118 @@ async function migrate() {
     // 1. Users
     await pool.query(`
       CREATE TABLE IF NOT EXISTS users (
-        id INT AUTO_INCREMENT PRIMARY KEY,
+        id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(100) NOT NULL,
         email VARCHAR(255) NOT NULL UNIQUE,
         password_hash VARCHAR(255) NOT NULL,
-        phone VARCHAR(20),
+        phone_number VARCHAR(20) DEFAULT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        role VARCHAR(50) NOT NULL DEFAULT 'user',
 
-        -- Email verification
         is_email_verified TINYINT(1) NOT NULL DEFAULT 0,
-        email_otp VARCHAR(6) NULL,
-        email_otp_expiry DATETIME NULL,
-
-        -- Phone verification
         is_phone_verified TINYINT(1) NOT NULL DEFAULT 0,
-        phone_otp VARCHAR(6) NULL,
-        phone_otp_expiry DATETIME NULL,
 
-        -- Forgot password
-        reset_otp VARCHAR(6) NULL,
-        reset_otp_expiry DATETIME NULL,
+        email_otp VARCHAR(6) DEFAULT NULL,
+        email_otp_expiry DATETIME DEFAULT NULL,
 
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        phone_otp VARCHAR(6) DEFAULT NULL,
+        phone_otp_expiry DATETIME DEFAULT NULL,
+
+        reset_otp VARCHAR(6) DEFAULT NULL,
+        reset_otp_expiry DATETIME DEFAULT NULL
       )
     `);
 
     console.log('Users table created/checked.');
 
-    // 1.1 Make sure OTP columns exist in an already-existing users table
-    // This is important because CREATE TABLE IF NOT EXISTS does not
-    // modify an existing table.
-
+    // 1.1 Check OTP columns in case users table already existed
     const [userColumns] = await pool.query(`
       SHOW COLUMNS FROM users
     `);
 
     const existingColumns = userColumns.map((column) => column.Field);
 
-    if (!existingColumns.includes('is_email_verified')) {
-      await pool.query(`
-        ALTER TABLE users
-        ADD COLUMN is_email_verified TINYINT(1) NOT NULL DEFAULT 0
-      `);
-      console.log('Added is_email_verified.');
+    const columnsToAdd = [
+      {
+        name: 'phone_number',
+        sql: `
+          ALTER TABLE users
+          ADD COLUMN phone_number VARCHAR(20) DEFAULT NULL
+        `
+      },
+      {
+        name: 'role',
+        sql: `
+          ALTER TABLE users
+          ADD COLUMN role VARCHAR(50) NOT NULL DEFAULT 'user'
+        `
+      },
+      {
+        name: 'is_email_verified',
+        sql: `
+          ALTER TABLE users
+          ADD COLUMN is_email_verified TINYINT(1) NOT NULL DEFAULT 0
+        `
+      },
+      {
+        name: 'is_phone_verified',
+        sql: `
+          ALTER TABLE users
+          ADD COLUMN is_phone_verified TINYINT(1) NOT NULL DEFAULT 0
+        `
+      },
+      {
+        name: 'email_otp',
+        sql: `
+          ALTER TABLE users
+          ADD COLUMN email_otp VARCHAR(6) DEFAULT NULL
+        `
+      },
+      {
+        name: 'email_otp_expiry',
+        sql: `
+          ALTER TABLE users
+          ADD COLUMN email_otp_expiry DATETIME DEFAULT NULL
+        `
+      },
+      {
+        name: 'phone_otp',
+        sql: `
+          ALTER TABLE users
+          ADD COLUMN phone_otp VARCHAR(6) DEFAULT NULL
+        `
+      },
+      {
+        name: 'phone_otp_expiry',
+        sql: `
+          ALTER TABLE users
+          ADD COLUMN phone_otp_expiry DATETIME DEFAULT NULL
+        `
+      },
+      {
+        name: 'reset_otp',
+        sql: `
+          ALTER TABLE users
+          ADD COLUMN reset_otp VARCHAR(6) DEFAULT NULL
+        `
+      },
+      {
+        name: 'reset_otp_expiry',
+        sql: `
+          ALTER TABLE users
+          ADD COLUMN reset_otp_expiry DATETIME DEFAULT NULL
+        `
+      }
+    ];
+
+    for (const column of columnsToAdd) {
+      if (!existingColumns.includes(column.name)) {
+        await pool.query(column.sql);
+        console.log(`Added missing column: ${column.name}`);
+      }
     }
 
-    if (!existingColumns.includes('is_phone_verified')) {
-      await pool.query(`
-        ALTER TABLE users
-        ADD COLUMN is_phone_verified TINYINT(1) NOT NULL DEFAULT 0
-      `);
-      console.log('Added is_phone_verified.');
-    }
-
-    if (!existingColumns.includes('email_otp')) {
-      await pool.query(`
-        ALTER TABLE users
-        ADD COLUMN email_otp VARCHAR(6) NULL
-      `);
-      console.log('Added email_otp.');
-    }
-
-    if (!existingColumns.includes('email_otp_expiry')) {
-      await pool.query(`
-        ALTER TABLE users
-        ADD COLUMN email_otp_expiry DATETIME NULL
-      `);
-      console.log('Added email_otp_expiry.');
-    }
-
-    if (!existingColumns.includes('phone_otp')) {
-      await pool.query(`
-        ALTER TABLE users
-        ADD COLUMN phone_otp VARCHAR(6) NULL
-      `);
-      console.log('Added phone_otp.');
-    }
-
-    if (!existingColumns.includes('phone_otp_expiry')) {
-      await pool.query(`
-        ALTER TABLE users
-        ADD COLUMN phone_otp_expiry DATETIME NULL
-      `);
-      console.log('Added phone_otp_expiry.');
-    }
-
-    if (!existingColumns.includes('reset_otp')) {
-      await pool.query(`
-        ALTER TABLE users
-        ADD COLUMN reset_otp VARCHAR(6) NULL
-      `);
-      console.log('Added reset_otp.');
-    }
-
-    if (!existingColumns.includes('reset_otp_expiry')) {
-      await pool.query(`
-        ALTER TABLE users
-        ADD COLUMN reset_otp_expiry DATETIME NULL
-      `);
-      console.log('Added reset_otp_expiry.');
-    }
-
-    console.log('OTP and password-reset columns checked.');
+    console.log('Users OTP/authentication columns checked.');
 
     // 2. Medicines
     await pool.query(`
