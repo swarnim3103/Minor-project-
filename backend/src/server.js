@@ -22,8 +22,10 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use("/api/medicines", medicineRoutes);
 app.use('/api/otp', otpRoutes);
 app.use('/api/reminders', reminderRoutes);
+const historyRoutes = require('./routes/history.routes');
 const chatRoutes = require("./routes/chat.routes");
 app.use('/api/chat', chatRoutes);
+app.use('/api/history', historyRoutes);
 // TEMPORARY DEVELOPMENT LOGIN
 // Remove this before deploying the backend publicly.
 app.post('/api/dev-login', async (req, res) => {
