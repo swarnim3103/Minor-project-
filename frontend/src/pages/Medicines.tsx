@@ -16,7 +16,6 @@ const FREQUENCIES = [
   "Three times daily",
   "Four times daily",
   "Weekly",
-  "As needed",
 ];
 
 const emptyForm = {
