@@ -34,7 +34,23 @@ function getReminderFrequency(medicineFrequency) {
 
 function getDayOfWeek(dateString) {
   const date = new Date(`${dateString}T00:00:00Z`);
-  return date.getUTCDay();
+
+  // Convert JavaScript's 0-6 format
+  // to MySQL's 1-7 format:
+  //
+  // JavaScript:
+  // Sunday = 0
+  // Monday = 1
+  // ...
+  // Saturday = 6
+  //
+  // MySQL:
+  // Sunday = 1
+  // Monday = 2
+  // ...
+  // Saturday = 7
+
+  return date.getUTCDay() + 1;
 }
 
 // =========================================================
