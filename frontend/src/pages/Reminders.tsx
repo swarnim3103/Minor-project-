@@ -69,14 +69,24 @@ async function loadMedicines() {
     const res = await fetch(`${API_BASE}/medicines`, {
       headers: getAuthHeaders(),
     });
-    if (!res.ok) throw new Error("Failed to load medicines");
-    const data = await res.json(); // this is a raw array, not { medicines: [...] }
+
+    if (!res.ok) {
+      throw new Error("Failed to load medicines");
+    }
+
+    const data = await res.json();
+
     setMedicines(data || []);
+
     if (data?.length > 0) {
-      setMedicineId(data[0].id);
+      setMedicineId((current) => current ?? data[0].id);
+    } else {
+      setMedicineId(null);
     }
   } catch (err) {
-    console.error(err);
+    console.error("Failed to load medicines:", err);
+    setMedicines([]);
+    setMedicineId(null);
   }
 }
 
@@ -154,7 +164,19 @@ async function loadMedicines() {
           <h2>Set Reminders</h2>
           <p>Reminders are synced to Google Calendar and trigger a voice call at the scheduled time.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
+        <button
+  className="btn btn-primary"
+  onClick={() => {
+    if (medicines.length === 0) {
+      setError("Please add a medicine before creating a reminder.");
+      return;
+    }
+
+    setError("");
+    setMedicineId(medicines[0].id);
+    setIsModalOpen(true);
+  }}
+>
           <PlusIcon width={16} height={16} />
           Add Reminder
         </button>

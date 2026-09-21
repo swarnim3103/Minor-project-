@@ -1,40 +1,85 @@
-const pool = require('../config/db');
+const pool = require("../config/db");
 
-/**
- * POST /api/reminders
- * Body: { medicine_id, reminder_time, start_date, end_date }
- * user_id comes from the logged-in user (req.user.id), NOT from the body -
- * this prevents someone creating reminders for another user's account.
- */
+// =========================================================
+// CREATE REMINDER
+// =========================================================
+
 async function createReminder(req, res) {
   try {
-    const { medicine_id, reminder_time, start_date, end_date } = req.body;
-    const userId = req.user.id; // from JWT via authenticate middleware
+    const {
+      medicine_id,
+      reminder_time,
+      start_date,
+      end_date,
+    } = req.body;
 
-    if (!medicine_id || !reminder_time || !start_date || !end_date) {
+    const userId = req.user.id;
+
+    if (
+      !medicine_id ||
+      !reminder_time ||
+      !start_date ||
+      !end_date
+    ) {
       return res.status(400).json({
-        error: 'medicine_id, reminder_time, start_date, and end_date are all required',
+        error:
+          "medicine_id, reminder_time, start_date, and end_date are all required",
       });
     }
 
-    // Confirm the medicine actually belongs to this user (basic ownership check)
+    if (!/^\d{2}:\d{2}(:\d{2})?$/.test(reminder_time)) {
+      return res.status(400).json({
+        error: "Invalid reminder time",
+      });
+    }
+
+    if (end_date < start_date) {
+      return res.status(400).json({
+        error: "End date cannot be before start date",
+      });
+    }
+
+    // Make sure the medicine belongs to this user
     const [medicineRows] = await pool.query(
-      'SELECT id FROM medicines WHERE id = ? AND user_id = ?',
+      `
+      SELECT id
+      FROM medicines
+      WHERE id = ? AND user_id = ?
+      `,
       [medicine_id, userId]
     );
 
     if (medicineRows.length === 0) {
-      return res.status(404).json({ error: 'Medicine not found for this user' });
+      return res.status(404).json({
+        error: "Medicine not found for this user",
+      });
     }
 
     const [result] = await pool.query(
-      `INSERT INTO reminders (user_id, medicine_id, reminder_time, start_date, end_date, status)
-       VALUES (?, ?, ?, ?, ?, 'active')`,
-      [userId, medicine_id, reminder_time, start_date, end_date]
+      `
+      INSERT INTO reminders
+      (
+        user_id,
+        medicine_id,
+        reminder_time,
+        start_date,
+        end_date,
+        status
+      )
+      VALUES (?, ?, ?, ?, ?, "active")
+      `,
+      [
+        userId,
+        medicine_id,
+        reminder_time,
+        start_date,
+        end_date,
+      ]
     );
 
     return res.status(201).json({
-      message: 'Reminder created',
+      message: "Reminder created",
+
       reminder: {
         id: result.insertId,
         user_id: userId,
@@ -42,97 +87,183 @@ async function createReminder(req, res) {
         reminder_time,
         start_date,
         end_date,
-        status: 'active',
+        status: "active",
       },
     });
   } catch (err) {
-    console.error('[reminder.create] error:', err);
-    return res.status(500).json({ error: 'Something went wrong creating the reminder' });
+    console.error("[reminder.create] error:", err);
+
+    return res.status(500).json({
+      error: "Something went wrong creating the reminder",
+    });
   }
 }
 
-/**
- * GET /api/reminders
- * Returns all reminders belonging to the logged-in user
- */
+// =========================================================
+// GET USER REMINDERS
+// =========================================================
+
 async function getMyReminders(req, res) {
   try {
     const userId = req.user.id;
 
     const [rows] = await pool.query(
-      `SELECT r.*, m.name AS medicine_name, m.dosage AS dosage
-       FROM reminders r
-       JOIN medicines m ON m.id = r.medicine_id
-       WHERE r.user_id = ?
-       ORDER BY r.reminder_time ASC`,
+      `
+      SELECT
+        r.*,
+        m.name AS medicine_name,
+        m.dosage AS dosage
+      FROM reminders r
+      JOIN medicines m
+        ON m.id = r.medicine_id
+      WHERE r.user_id = ?
+      ORDER BY r.reminder_time ASC
+      `,
       [userId]
     );
 
-    return res.json({ reminders: rows });
+    return res.json({
+      reminders: rows,
+    });
   } catch (err) {
-    console.error('[reminder.getMy] error:', err);
-    return res.status(500).json({ error: 'Something went wrong fetching reminders' });
-  }
-}9
+    console.error("[reminder.getMy] error:", err);
 
-/**
- * PATCH /api/reminders/:id
- * Update status (active/inactive), reminder_time, or dates
- */
+    return res.status(500).json({
+      error: "Something went wrong fetching reminders",
+    });
+  }
+}
+
+// =========================================================
+// UPDATE REMINDER
+// =========================================================
+
 async function updateReminder(req, res) {
   try {
     const userId = req.user.id;
     const reminderId = req.params.id;
-    const { reminder_time, start_date, end_date, status } = req.body;
+
+    const {
+      reminder_time,
+      start_date,
+      end_date,
+      status,
+    } = req.body;
 
     const [existing] = await pool.query(
-      'SELECT id FROM reminders WHERE id = ? AND user_id = ?',
+      `
+      SELECT id
+      FROM reminders
+      WHERE id = ? AND user_id = ?
+      `,
       [reminderId, userId]
     );
 
     if (existing.length === 0) {
-      return res.status(404).json({ error: 'Reminder not found' });
+      return res.status(404).json({
+        error: "Reminder not found",
+      });
+    }
+
+    if (
+      status !== undefined &&
+      status !== "active" &&
+      status !== "inactive"
+    ) {
+      return res.status(400).json({
+        error: "Invalid reminder status",
+      });
+    }
+
+    if (
+      reminder_time !== undefined &&
+      !/^\d{2}:\d{2}(:\d{2})?$/.test(reminder_time)
+    ) {
+      return res.status(400).json({
+        error: "Invalid reminder time",
+      });
+    }
+
+    if (
+      start_date &&
+      end_date &&
+      end_date < start_date
+    ) {
+      return res.status(400).json({
+        error: "End date cannot be before start date",
+      });
     }
 
     await pool.query(
-      `UPDATE reminders SET
+      `
+      UPDATE reminders
+      SET
         reminder_time = COALESCE(?, reminder_time),
         start_date = COALESCE(?, start_date),
         end_date = COALESCE(?, end_date),
         status = COALESCE(?, status)
-       WHERE id = ?`,
-      [reminder_time, start_date, end_date, status, reminderId]
+      WHERE id = ? AND user_id = ?
+      `,
+      [
+        reminder_time || null,
+        start_date || null,
+        end_date || null,
+        status || null,
+        reminderId,
+        userId,
+      ]
     );
 
-    return res.json({ message: 'Reminder updated' });
+    return res.json({
+      message: "Reminder updated",
+    });
   } catch (err) {
-    console.error('[reminder.update] error:', err);
-    return res.status(500).json({ error: 'Something went wrong updating the reminder' });
+    console.error("[reminder.update] error:", err);
+
+    return res.status(500).json({
+      error: "Something went wrong updating the reminder",
+    });
   }
 }
 
-/**
- * DELETE /api/reminders/:id
- */
+// =========================================================
+// DELETE REMINDER
+// =========================================================
+
 async function deleteReminder(req, res) {
   try {
     const userId = req.user.id;
     const reminderId = req.params.id;
 
     const [result] = await pool.query(
-      'DELETE FROM reminders WHERE id = ? AND user_id = ?',
+      `
+      DELETE FROM reminders
+      WHERE id = ? AND user_id = ?
+      `,
       [reminderId, userId]
     );
 
     if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Reminder not found' });
+      return res.status(404).json({
+        error: "Reminder not found",
+      });
     }
 
-    return res.json({ message: 'Reminder deleted' });
+    return res.json({
+      message: "Reminder deleted",
+    });
   } catch (err) {
-    console.error('[reminder.delete] error:', err);
-    return res.status(500).json({ error: 'Something went wrong deleting the reminder' });
+    console.error("[reminder.delete] error:", err);
+
+    return res.status(500).json({
+      error: "Something went wrong deleting the reminder",
+    });
   }
 }
 
-module.exports = { createReminder, getMyReminders, updateReminder, deleteReminder };
+module.exports = {
+  createReminder,
+  getMyReminders,
+  updateReminder,
+  deleteReminder,
+};

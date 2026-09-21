@@ -13,6 +13,10 @@ export interface AuthResponse {
 
 const API_URL = "http://localhost:5000/api";
 
+// =========================================================
+// AUTH
+// =========================================================
+
 export async function loginUser(
   email: string,
   password: string
@@ -57,11 +61,16 @@ export async function registerUser(
 
   return data;
 }
+
+// =========================================================
+// DASHBOARD
+// =========================================================
+
 export interface DashboardReminder {
   id: number;
   medicine_name: string;
   reminder_time: string;
-  status: string;
+  status: "active" | "inactive";
   dosage: string;
 }
 
@@ -70,7 +79,9 @@ export interface DashboardMedicine {
   name: string;
   dosage: string;
   frequency: string;
+  instructions?: string;
   start_date: string | null;
+  end_date?: string | null;
 }
 
 export interface DashboardStats {
@@ -104,14 +115,34 @@ export async function getDashboard(): Promise<DashboardData> {
 
   return data;
 }
-export async function addMedicine(medicine: {
+
+// =========================================================
+// MEDICINES
+// =========================================================
+
+export interface MedicinePayload {
   name: string;
   dosage: string;
   frequency: string;
   instructions?: string;
   start_date: string;
   end_date?: string;
-}) {
+}
+
+export interface MedicineResponse {
+  id: number;
+  name: string;
+  dosage: string;
+  frequency: string;
+  instructions?: string;
+  start_date: string;
+  end_date?: string | null;
+}
+
+// ADD MEDICINE
+export async function addMedicine(
+  medicine: MedicinePayload
+): Promise<{ message: string; medicineId: number }> {
   const token = localStorage.getItem("token");
 
   const response = await fetch(`${API_URL}/medicines`, {
@@ -131,17 +162,9 @@ export async function addMedicine(medicine: {
 
   return data;
 }
-export async function getMedicines(): Promise<
-  {
-    id: number;
-    name: string;
-    dosage: string;
-    frequency: string;
-    instructions?: string;
-    start_date: string;
-    end_date?: string;
-  }[]
-> {
+
+// GET MEDICINES
+export async function getMedicines(): Promise<MedicineResponse[]> {
   const token = localStorage.getItem("token");
 
   const response = await fetch(`${API_URL}/medicines`, {
@@ -160,11 +183,60 @@ export async function getMedicines(): Promise<
   return data;
 }
 
+// UPDATE MEDICINE
+export async function updateMedicine(
+  id: number,
+  medicine: MedicinePayload
+): Promise<{ message: string }> {
+  const token = localStorage.getItem("token");
+
+  const response = await fetch(`${API_URL}/medicines/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(medicine),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to update medicine");
+  }
+
+  return data;
+}
+
+// DELETE MEDICINE
+export async function deleteMedicine(
+  id: number
+): Promise<{ message: string }> {
+  const token = localStorage.getItem("token");
+
+  const response = await fetch(`${API_URL}/medicines/${id}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to delete medicine");
+  }
+
+  return data;
+}
+
 // =========================================================
-// NEW: EMAIL OTP VERIFICATION
+// EMAIL OTP VERIFICATION
 // =========================================================
 
-export async function sendEmailOtp(email: string): Promise<{ message: string }> {
+export async function sendEmailOtp(
+  email: string
+): Promise<{ message: string }> {
   const response = await fetch(`${API_URL}/auth/send-email-otp`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -172,9 +244,11 @@ export async function sendEmailOtp(email: string): Promise<{ message: string }> 
   });
 
   const data = await response.json();
+
   if (!response.ok) {
     throw new Error(data.error || "Failed to send email OTP");
   }
+
   return data;
 }
 
@@ -189,14 +263,16 @@ export async function verifyEmailOtp(
   });
 
   const data = await response.json();
+
   if (!response.ok) {
     throw new Error(data.error || "Incorrect OTP");
   }
+
   return data;
 }
 
 // =========================================================
-// NEW: PHONE OTP VERIFICATION
+// PHONE OTP VERIFICATION
 // =========================================================
 
 export async function sendPhoneOtp(
@@ -209,9 +285,11 @@ export async function sendPhoneOtp(
   });
 
   const data = await response.json();
+
   if (!response.ok) {
     throw new Error(data.error || "Failed to send phone OTP");
   }
+
   return data;
 }
 
@@ -226,17 +304,21 @@ export async function verifyPhoneOtp(
   });
 
   const data = await response.json();
+
   if (!response.ok) {
     throw new Error(data.error || "Incorrect OTP");
   }
+
   return data;
 }
 
 // =========================================================
-// NEW: FORGOT PASSWORD (email OTP based)
+// FORGOT PASSWORD
 // =========================================================
 
-export async function forgotPassword(email: string): Promise<{ message: string }> {
+export async function forgotPassword(
+  email: string
+): Promise<{ message: string }> {
   const response = await fetch(`${API_URL}/auth/forgot-password`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -244,9 +326,11 @@ export async function forgotPassword(email: string): Promise<{ message: string }
   });
 
   const data = await response.json();
+
   if (!response.ok) {
     throw new Error(data.error || "Failed to send reset code");
   }
+
   return data;
 }
 
@@ -258,12 +342,18 @@ export async function resetPassword(
   const response = await fetch(`${API_URL}/auth/reset-password`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, otp, newPassword }),
+    body: JSON.stringify({
+      email,
+      otp,
+      newPassword,
+    }),
   });
 
   const data = await response.json();
+
   if (!response.ok) {
     throw new Error(data.error || "Failed to reset password");
   }
+
   return data;
 }
