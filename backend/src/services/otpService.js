@@ -1,21 +1,16 @@
 const axios = require('axios');
 const pool = require('../config/db');
+const { generateOtp, getOtpExpiry, isOtpExpired } = require('../utils/otp.util');
+const { sendSmsOtp } = require('../utils/sms.util');
+const { sendEmail, otpEmailTemplate } = require('../utils/mailer.util');
 
 const OTP_EXPIRY_MINUTES = 5;
 
-function generateOtp() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
-function getExpiryDate() {
-  return new Date(Date.now() + OTP_EXPIRY_MINUTES * 60 * 1000);
-}
-
-// --- EMAIL OTP (mocked delivery via console log for now - swap in real email later) ---
+// --- EMAIL OTP (now actually sent via mailer.util, not just logged) ---
 
 async function sendEmailOtp(email) {
   const otp = generateOtp();
-  const expiry = getExpiryDate();
+  const expiry = getOtpExpiry(OTP_EXPIRY_MINUTES);
 
   const [result] = await pool.query(
     'UPDATE users SET email_otp = ?, email_otp_expiry = ? WHERE email = ?',
@@ -26,8 +21,7 @@ async function sendEmailOtp(email) {
     throw new Error('No account found with this email');
   }
 
-  // TODO: replace with real email sending (Nodemailer) when ready.
-  console.log(`[EMAIL OTP] To: ${email} | Code: ${otp} (expires in ${OTP_EXPIRY_MINUTES} min)`);
+  await sendEmail(email, 'Your MedCare verification code', otpEmailTemplate(otp, 'verify your email'));
 
   return { otp }; // returned for dev visibility only; don't expose this in the API response
 }
@@ -42,7 +36,7 @@ async function verifyEmailOtp(email, submittedOtp) {
   if (!user || !user.email_otp) {
     throw new Error('No OTP found. Please request a new one.');
   }
-  if (new Date() > new Date(user.email_otp_expiry)) {
+  if (isOtpExpired(user.email_otp_expiry)) {
     throw new Error('OTP expired. Please request a new one.');
   }
   if (user.email_otp !== submittedOtp) {
@@ -55,11 +49,12 @@ async function verifyEmailOtp(email, submittedOtp) {
   );
 }
 
-// --- PHONE OTP (real delivery via Termux SMS gateway) ---
+// --- PHONE OTP (real delivery via Termux phone/SMS gateway) ---
+// Used by auth.controller's sendPhoneOtp / verifyPhoneOtp routes.
 
 async function sendPhoneOtp(phoneNumber) {
   const otp = generateOtp();
-  const expiry = getExpiryDate();
+  const expiry = getOtpExpiry(OTP_EXPIRY_MINUTES);
 
   const [result] = await pool.query(
     'UPDATE users SET phone_otp = ?, phone_otp_expiry = ? WHERE phone_number = ?',
@@ -92,7 +87,7 @@ async function verifyPhoneOtp(phoneNumber, submittedOtp) {
   if (!user || !user.phone_otp) {
     throw new Error('No OTP found. Please request a new one.');
   }
-  if (new Date() > new Date(user.phone_otp_expiry)) {
+  if (isOtpExpired(user.phone_otp_expiry)) {
     throw new Error('OTP expired. Please request a new one.');
   }
   if (user.phone_otp !== submittedOtp) {
@@ -105,11 +100,59 @@ async function verifyPhoneOtp(phoneNumber, submittedOtp) {
   );
 }
 
+// --- GENERIC AUTHENTICATED-USER PHONE OTP (used by otp.controller.js) ---
+// Same phone_otp columns as above, but keyed by userId (from the JWT) instead
+// of a phone_number passed in the body, and delivered via the sms.util stub
+// so it works even before a real SMS provider or the phone gateway is set up.
+
+async function createAndSendOtp(userId, phoneNumber) {
+  const otp = generateOtp();
+  const expiresAt = getOtpExpiry(OTP_EXPIRY_MINUTES);
+
+  const [result] = await pool.query(
+    'UPDATE users SET phone_otp = ?, phone_otp_expiry = ? WHERE id = ?',
+    [otp, expiresAt, userId]
+  );
+
+  if (result.affectedRows === 0) {
+    throw new Error('User not found');
+  }
+
+  await sendSmsOtp(phoneNumber, otp);
+
+  return { expiresAt };
+}
+
+async function verifyOtp(userId, submittedOtp) {
+  const [rows] = await pool.query(
+    'SELECT phone_otp, phone_otp_expiry FROM users WHERE id = ?',
+    [userId]
+  );
+  const user = rows[0];
+
+  if (!user || !user.phone_otp) {
+    return { success: false, reason: 'No OTP found. Please request a new one.' };
+  }
+  if (isOtpExpired(user.phone_otp_expiry)) {
+    return { success: false, reason: 'OTP expired. Please request a new one.' };
+  }
+  if (user.phone_otp !== submittedOtp) {
+    return { success: false, reason: 'Incorrect OTP.' };
+  }
+
+  await pool.query(
+    'UPDATE users SET is_phone_verified = 1, phone_otp = NULL, phone_otp_expiry = NULL WHERE id = ?',
+    [userId]
+  );
+
+  return { success: true };
+}
+
 // --- FORGOT PASSWORD (email OTP based) ---
 
 async function sendResetOtp(email) {
   const otp = generateOtp();
-  const expiry = getExpiryDate();
+  const expiry = getOtpExpiry(OTP_EXPIRY_MINUTES);
 
   const [result] = await pool.query(
     'UPDATE users SET reset_otp = ?, reset_otp_expiry = ? WHERE email = ?',
@@ -120,7 +163,7 @@ async function sendResetOtp(email) {
     throw new Error('No account found with this email');
   }
 
-  console.log(`[RESET OTP] To: ${email} | Code: ${otp} (expires in ${OTP_EXPIRY_MINUTES} min)`);
+  await sendEmail(email, 'Your MedCare password reset code', otpEmailTemplate(otp, 'reset your password'));
 }
 
 async function verifyResetOtpAndSetPassword(email, submittedOtp, newPasswordHash) {
@@ -133,7 +176,7 @@ async function verifyResetOtpAndSetPassword(email, submittedOtp, newPasswordHash
   if (!user || !user.reset_otp) {
     throw new Error('No reset request found. Please request a new one.');
   }
-  if (new Date() > new Date(user.reset_otp_expiry)) {
+  if (isOtpExpired(user.reset_otp_expiry)) {
     throw new Error('Code expired. Please request a new one.');
   }
   if (user.reset_otp !== submittedOtp) {
@@ -151,6 +194,8 @@ module.exports = {
   verifyEmailOtp,
   sendPhoneOtp,
   verifyPhoneOtp,
+  createAndSendOtp,
+  verifyOtp,
   sendResetOtp,
   verifyResetOtpAndSetPassword,
 };
