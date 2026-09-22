@@ -1,8 +1,9 @@
 const axios = require('axios');
 const CallGatewayInterface = require('./CallGatewayInterface');
 
-const POLL_INTERVAL_MS = 3000;
-const POLL_TIMEOUT_MS = 90000; // give up and treat as no_answer after 90s
+const POLL_DELAY_MS = 15000;   // wait 15s after dialing before first status check
+const POLL_INTERVAL_MS = 5000; // check every 5s after that
+const POLL_MAX_ATTEMPTS = 12;  // give up after ~75s total of polling
 
 class PhoneCallGateway extends CallGatewayInterface {
   constructor() {
@@ -22,78 +23,89 @@ class PhoneCallGateway extends CallGatewayInterface {
   }
 
   async dial({ toNumber, audioFile, reminderId, attemptNumber }) {
+    const callId = `phone-${reminderId}-${Date.now()}`;
+    const dialedAt = Date.now();
+
     try {
-      const response = await axios.post(`${this.phoneGatewayUrl}/make-call`, {
+      await axios.post(`${this.phoneGatewayUrl}/make-call`, {
         number: toNumber,
         reminderId,
       });
 
-      const callId = `phone-${reminderId}-${Date.now()}`;
-      const dialedAt = new Date();
-
+      console.log(`[PhoneCallGateway] Call placed to ${toNumber}, polling for outcome...`);
       this._emitStatus({ callId, reminderId, status: 'ringing', toNumber, audioFile, attemptNumber });
 
-      console.log('[PhoneCallGateway] Call placed:', response.data);
+      this._pollCallStatus({ callId, reminderId, toNumber, audioFile, attemptNumber, dialedAt });
 
-      // termux-telephony-call can't report call state on its own, so poll
-      // the gateway's call-log endpoint until an outcome shows up.
-      this._pollForOutcome({ callId, reminderId, toNumber, audioFile, attemptNumber, dialedAt });
-
-      return { callId, status: 'initiated', startedAt: dialedAt };
+      return { callId, status: 'initiated', startedAt: new Date(dialedAt) };
     } catch (err) {
       console.error('[PhoneCallGateway] Failed to reach phone gateway:', err.message);
+      this._emitStatus({ callId, reminderId, status: 'failed', toNumber, audioFile, attemptNumber });
       throw new Error('Could not reach phone gateway - is Termux server running and on the same WiFi?');
     }
   }
 
-  _pollForOutcome({ callId, reminderId, toNumber, audioFile, attemptNumber, dialedAt }) {
-    const deadline = Date.now() + POLL_TIMEOUT_MS;
+  async _pollCallStatus({ callId, reminderId, toNumber, audioFile, attemptNumber, dialedAt }) {
+    await this._sleep(POLL_DELAY_MS);
 
-    const poll = async () => {
-      if (Date.now() > deadline) {
-        console.warn(`[PhoneCallGateway] Gave up waiting for outcome of reminder ${reminderId}`);
-        this._emitStatus({ callId, reminderId, status: 'no_answer', toNumber, audioFile, attemptNumber });
-        return;
-      }
-
+    for (let i = 0; i < POLL_MAX_ATTEMPTS; i++) {
       try {
-        const { data } = await axios.get(`${this.phoneGatewayUrl}/call-status`, {
-          params: { number: toNumber, since: dialedAt.getTime() },
+        const res = await axios.get(`${this.phoneGatewayUrl}/call-status`, {
+          params: { number: toNumber, since: dialedAt },
         });
 
-        // Expected response shape from the Termux gateway:
-        // { found: boolean, outcome: 'connected' | 'no_answer' | 'busy', durationSeconds: number }
-        if (data.found) {
-          if (data.outcome === 'connected') {
-            this._emitStatus({ callId, reminderId, status: 'connected', toNumber, audioFile, attemptNumber });
+        const { found, outcome, durationSeconds } = res.data;
+
+        if (found) {
+          console.log(`[PhoneCallGateway] Outcome for reminder ${reminderId}: ${outcome}`);
+
+          if (outcome === 'connected') {
             this._emitStatus({
               callId,
               reminderId,
               status: 'completed',
-              durationSeconds: data.durationSeconds || 0,
+              durationSeconds,
               toNumber,
               audioFile,
               attemptNumber,
             });
           } else {
-            this._emitStatus({ callId, reminderId, status: data.outcome, toNumber, audioFile, attemptNumber });
+            this._emitStatus({
+              callId,
+              reminderId,
+              status: 'no_answer',
+              toNumber,
+              audioFile,
+              attemptNumber,
+            });
           }
-          return; // outcome found, stop polling
+          return;
         }
       } catch (err) {
-        console.error('[PhoneCallGateway] Poll failed:', err.message);
-        // transient error - keep polling rather than giving up immediately
+        console.error('[PhoneCallGateway] call-status check failed:', err.message);
       }
 
-      setTimeout(poll, POLL_INTERVAL_MS);
-    };
+      await this._sleep(POLL_INTERVAL_MS);
+    }
 
-    setTimeout(poll, POLL_INTERVAL_MS);
+    console.log(`[PhoneCallGateway] No call-status found after polling for reminder ${reminderId}, assuming no_answer`);
+    this._emitStatus({
+      callId,
+      reminderId,
+      status: 'no_answer',
+      toNumber,
+      audioFile,
+      attemptNumber,
+    });
+  }
+
+  _sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   async hangup(callId) {
-    console.log('[PhoneCallGateway] Hangup not fully supported yet for callId:', callId);
+    console.log('[PhoneCallGateway] Hangup not supported via Termux for callId:', callId);
   }
 }
 
-module.exports = PhoneCallGateway;  
+module.exports = PhoneCallGateway;
