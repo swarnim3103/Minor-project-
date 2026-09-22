@@ -46,7 +46,7 @@ async function register(req, res) {
     return res.status(201).json({
       message: 'Registered successfully',
       token,
-      users: { id: user.id, name, email, role: user.role },
+      user: { id: user.id, name, email, role: user.role },
     });
   } catch (err) {
     console.error('[auth.register] error:', err);
@@ -79,7 +79,7 @@ async function login(req, res) {
     return res.json({
       message: 'Login successful',
       token,
-      users: { id: user.id, name: user.name, email: user.email, role: user.role },
+      user: { id: user.id, name: user.name, email: user.email, role: user.role },
     });
   } catch (err) {
     console.error('[auth.login] error:', err);
@@ -97,7 +97,7 @@ async function getProfile(req, res) {
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    return res.json({ users: user });
+    return res.json({ user });
   } catch (err) {
     console.error('[auth.getProfile] error:', err);
     return res.status(500).json({ error: 'Something went wrong fetching profile' });

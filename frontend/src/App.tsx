@@ -1,5 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-
+import Profile from "./pages/Profile";
 import { AuthProvider } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
@@ -20,8 +20,12 @@ function App() {
     <AuthProvider>
       <BrowserRouter>
         <Routes>
+
           {/* Default route */}
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route
+            path="/"
+            element={<Navigate to="/login" replace />}
+          />
 
           {/* Authentication */}
           <Route path="/login" element={<Login />} />
@@ -29,7 +33,8 @@ function App() {
           <Route path="/verify-otp" element={<VerifyOtp />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
 
-          {/* Authenticated application pages, wrapped in the shared layout */}
+
+          {/* Authenticated application pages */}
           <Route
             element={
               <ProtectedRoute>
@@ -37,16 +42,50 @@ function App() {
               </ProtectedRoute>
             }
           >
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/medicines" element={<Medicines />} />
-            <Route path="/reminders" element={<Reminders />} />
-            <Route path="/prescriptions" element={<Prescriptions />} />
-            <Route path="/history" element={<History />} />
-            <Route path="/chatbot" element={<Chatbot />} />
+            <Route
+              path="/dashboard"
+              element={<Dashboard />}
+            />
+
+            <Route
+              path="/medicines"
+              element={<Medicines />}
+            />
+
+            <Route
+              path="/reminders"
+              element={<Reminders />}
+            />
+
+            <Route
+              path="/prescriptions"
+              element={<Prescriptions />}
+            />
+
+            <Route
+              path="/history"
+              element={<History />}
+            />
+
+            <Route
+              path="/chatbot"
+              element={<Chatbot />}
+            />
+
+            {/* Profile */}
+            <Route
+              path="/profile"
+              element={<Profile />}
+            />
           </Route>
 
+
           {/* Fallback */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route
+            path="*"
+            element={<Navigate to="/dashboard" replace />}
+          />
+
         </Routes>
       </BrowserRouter>
     </AuthProvider>
