@@ -8,9 +8,37 @@ const ALLOWED_FREQUENCIES = [
   "Weekly",
 ];
 
+function getIndiaDate() {
+  const formatter = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+
+  const parts = formatter.formatToParts(new Date());
+
+  const values = {};
+
+  for (const part of parts) {
+    if (part.type !== "literal") {
+      values[part.type] = part.value;
+    }
+  }
+
+  return `${values.year}-${values.month}-${values.day}`;
+}
+
+
 function validateDates(start_date, end_date) {
   if (!start_date) {
     return "Start date is required";
+  }
+
+  const today = getIndiaDate();
+
+  if (start_date < today) {
+    return "Start date cannot be before today";
   }
 
   if (end_date && end_date < start_date) {

@@ -27,6 +27,16 @@ const emptyForm = {
   end_date: "",
 };
 
+const getTodayDate = () => {
+  const now = new Date();
+
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
 function Medicines() {
   const [medicines, setMedicines] = useState<Medicine[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -58,7 +68,7 @@ function Medicines() {
     setEditingId(null);
     setForm({
       ...emptyForm,
-      start_date: new Date().toISOString().slice(0, 10),
+      start_date: getTodayDate(),
     });
     setError("");
     setIsModalOpen(true);
@@ -118,6 +128,11 @@ function Medicines() {
       setError("Please select a valid medicine frequency.");
       return;
     }
+
+    if (form.start_date < getTodayDate()) {
+  setError("Start date cannot be before today.");
+  return;
+}
 
     if (form.end_date && form.end_date < form.start_date) {
       setError("End date cannot be before start date.");
@@ -313,17 +328,18 @@ function Medicines() {
                 </label>
 
                 <input
-                  id="med-start"
-                  type="date"
-                  value={form.start_date}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      start_date: e.target.value,
-                    })
-                  }
-                  required
-                />
+  id="med-start"
+  type="date"
+  value={form.start_date}
+  min={getTodayDate()}
+  onChange={(e) =>
+    setForm({
+      ...form,
+      start_date: e.target.value,
+    })
+  }
+  required
+/>
               </div>
 
               <div className="form-field">
