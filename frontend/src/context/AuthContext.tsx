@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useState,
   type ReactNode,
@@ -10,6 +11,7 @@ export interface User {
   name: string;
   email: string;
   role: string;
+  profile_picture_url?: string | null;
 }
 
 interface AuthContextValue {
@@ -18,9 +20,12 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   login: (token: string, user: User) => void;
   logout: () => void;
+  updateUser: (updates: Partial<User>) => void;
 }
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+const AuthContext = createContext<AuthContextValue | undefined>(
+  undefined
+);
 
 function readStoredUser(): User | null {
   const raw = localStorage.getItem("user");
@@ -57,6 +62,21 @@ export function AuthProvider({
     setUser(newUser);
   }
 
+  const updateUser = useCallback((updates: Partial<User>) => {
+  setUser((currentUser) => {
+    if (!currentUser) return currentUser;
+
+    const updatedUser = {
+      ...currentUser,
+      ...updates,
+    };
+
+    localStorage.setItem("user", JSON.stringify(updatedUser));
+
+    return updatedUser;
+  });
+}, []);
+
   function logout() {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
@@ -73,6 +93,7 @@ export function AuthProvider({
         isAuthenticated: !!token,
         login,
         logout,
+        updateUser,
       }}
     >
       {children}

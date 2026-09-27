@@ -4,6 +4,7 @@ const {
   getMedicines,
   updateMedicine,
   deleteMedicine,
+  searchMedicineCatalogue,
 } = require("../controllers/medicine.controller");
 const { authenticate } = require("../middleware/auth");
 
@@ -13,5 +14,6 @@ router.post("/", authenticate, addMedicine);
 router.get("/", authenticate, getMedicines);
 router.put("/:id", authenticate, updateMedicine);
 router.delete("/:id", authenticate, deleteMedicine);
+router.get("/search", authenticate, searchMedicineCatalogue);
 
 module.exports = router;

@@ -168,6 +168,8 @@ profile_picture_public_id VARCHAR(255) DEFAULT NULL
         user_id INT NOT NULL,
         file_url VARCHAR(500),
         doctor_name VARCHAR(150),
+        ai_summary TEXT DEFAULT NULL,
+        ai_summary_status ENUM('completed', 'failed') DEFAULT NULL,
         prescription_date DATE,
         prescription_type ENUM('online', 'scanned_physical', 'handwritten_scanned') DEFAULT 'scanned_physical',
         original_filename VARCHAR(255),
@@ -205,6 +207,18 @@ profile_picture_public_id VARCHAR(255) DEFAULT NULL
       ON DELETE CASCADE
   )
 `);
+
+console.log('Reminders table created/checked.');
+
+// 5. Medicine catalogue
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS medicine_catalogue (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE
+  )
+`);
+
+console.log('Medicine catalogue table created/checked.');
 
 const [reminderColumns] = await pool.query(
   `SHOW COLUMNS FROM reminders`

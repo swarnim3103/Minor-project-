@@ -459,3 +459,17 @@
 .profile-logout-item:hover {
   background: #fff7f7;
 }
+
+.navbar-avatar,
+.profile-dropdown-avatar {
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.navbar-profile-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}

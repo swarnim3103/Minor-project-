@@ -1,3 +1,4 @@
+
 export interface User {
   id: number;
   name: string;
@@ -280,6 +281,32 @@ export async function addMedicine(
   return data;
 }
 
+export interface MedicineSuggestion {
+  id: number;
+  name: string;
+}
+
+export const searchMedicineCatalogue = async (
+  query: string
+): Promise<MedicineSuggestion[]> => {
+  const token = localStorage.getItem("token");
+
+  const response = await fetch(
+    `${API_URL}/medicines/search?q=${encodeURIComponent(query)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to search medicines");
+  }
+
+  return response.json();
+};
+
 // GET MEDICINES
 export async function getMedicines(): Promise<MedicineResponse[]> {
   const token = localStorage.getItem("token");
@@ -485,6 +512,8 @@ export interface Prescription {
   prescription_type: "online" | "scanned_physical" | "handwritten_scanned";
   file_url: string;
   original_filename: string;
+  ai_summary: string | null;
+  ai_summary_status: "completed" | "failed" | null;
 }
 
 export async function getPrescriptions(): Promise<Prescription[]> {
