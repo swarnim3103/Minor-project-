@@ -25,14 +25,16 @@ async function uploadPrescription(req, res) {
     // Generate the AI summary before saving, so the summary is ready
     // as soon as the upload response comes back. A failure here doesn't
     // block the upload — it just leaves ai_summary_status = 'failed'.
-    let aiSummary = null;
-    let aiSummaryStatus = 'failed';
-    try {
-      aiSummary = await generatePrescriptionSummary(req.file.path);
-      aiSummaryStatus = 'completed';
-    } catch (aiErr) {
-      console.error('[prescription.upload] AI summary generation failed:', aiErr.message);
-    }
+let aiSummary = null;
+let aiSummaryStatus = 'failed';
+try {
+  console.log('[prescription.upload] Calling AI summary generation...');
+  aiSummary = await generatePrescriptionSummary(req.file.path);
+  console.log('[prescription.upload] AI summary result:', aiSummary);
+  aiSummaryStatus = 'completed';
+} catch (aiErr) {
+  console.error('[prescription.upload] AI summary generation failed:', aiErr.message);
+}
 
     const [result] = await pool.query(
       `INSERT INTO prescriptions
