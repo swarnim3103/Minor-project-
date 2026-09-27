@@ -5,6 +5,7 @@ const fs = require('fs');
 // from anything used by the chatbot feature.
 const PRESCRIPTION_AI_API_KEY = process.env.PRESCRIPTION_AI_API_KEY;
 const PRESCRIPTION_AI_MODEL = process.env.PRESCRIPTION_AI_MODEL || 'gemini-2.0-flash';
+console.log('[prescriptionAi] Using model:', PRESCRIPTION_AI_MODEL);
 
 const SUMMARY_PROMPT = `You are summarizing a medical prescription for a patient's personal records app.
 Read the attached prescription PDF and write a short, patient-friendly summary in 2-3 sentences covering:
@@ -23,36 +24,45 @@ async function generatePrescriptionSummary(pdfFilePath) {
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${PRESCRIPTION_AI_MODEL}:generateContent?key=${PRESCRIPTION_AI_API_KEY}`;
 
-  const response = await axios.post(
-    url,
-    {
-      contents: [
-        {
-          parts: [
-            { text: SUMMARY_PROMPT },
-            {
-              inline_data: {
-                mime_type: 'application/pdf',
-                data: base64Pdf,
+  console.log('[prescriptionAi] Calling URL:', url.replace(PRESCRIPTION_AI_API_KEY, 'REDACTED'));
+
+  try {
+    const response = await axios.post(
+      url,
+      {
+        contents: [
+          {
+            parts: [
+              { text: SUMMARY_PROMPT },
+              {
+                inline_data: {
+                  mime_type: 'application/pdf',
+                  data: base64Pdf,
+                },
               },
-            },
-          ],
-        },
-      ],
-    },
-    {
-      headers: { 'Content-Type': 'application/json' },
-      timeout: 30000,
+            ],
+          },
+        ],
+      },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 30000,
+      }
+    );
+
+    const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+
+    if (!text) {
+      throw new Error('Gemini did not return a summary');
     }
-  );
 
-  const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-  if (!text) {
-    throw new Error('Gemini did not return a summary');
+    return text.trim();
+  } catch (err) {
+    // Log the ACTUAL response body from Google, not just the status code
+    if (err.response) {
+      console.error('[prescriptionAi] Gemini API error response:', JSON.stringify(err.response.data, null, 2));
+    }
+    throw err;
   }
-
-  return text.trim();
 }
-
 module.exports = { generatePrescriptionSummary };
