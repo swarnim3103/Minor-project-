@@ -474,3 +474,86 @@ export async function resetPassword(
 
   return data;
 }
+// =========================================================
+// PRESCRIPTIONS
+// =========================================================
+
+export interface Prescription {
+  id: number;
+  doctor_name: string;
+  prescription_date: string;
+  prescription_type: "online" | "scanned_physical" | "handwritten_scanned";
+  file_url: string;
+  original_filename: string;
+}
+
+export async function getPrescriptions(): Promise<Prescription[]> {
+  const token = localStorage.getItem("token");
+
+  const response = await fetch(`${API_URL}/prescriptions`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to fetch prescriptions");
+  }
+
+  return data.prescriptions;
+}
+
+export async function uploadPrescription(payload: {
+  file: File;
+  doctor_name: string;
+  prescription_date: string;
+  prescription_type: string;
+}): Promise<{ message: string; prescription: Prescription }> {
+  const token = localStorage.getItem("token");
+
+  const formData = new FormData();
+  formData.append("file", payload.file);
+  formData.append("doctor_name", payload.doctor_name);
+  formData.append("prescription_date", payload.prescription_date);
+  formData.append("prescription_type", payload.prescription_type);
+
+  const response = await fetch(`${API_URL}/prescriptions`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`, // no Content-Type - browser sets it for FormData
+    },
+    body: formData,
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to upload prescription");
+  }
+
+  return data;
+}
+
+export async function deletePrescription(
+  id: number
+): Promise<{ message: string }> {
+  const token = localStorage.getItem("token");
+
+  const response = await fetch(`${API_URL}/prescriptions/${id}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to delete prescription");
+  }
+
+  return data;
+}

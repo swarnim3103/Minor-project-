@@ -3,17 +3,12 @@ import Modal from "../components/Modal";
 import { PlusIcon, FileIcon, UploadIcon } from "../components/icons";
 import "../styles/shared.css";
 import "./Prescriptions.css";
-
-const API_BASE = "http://localhost:5000/api";
-
-interface Prescription {
-  id: number;
-  doctor_name: string;
-  prescription_date: string;
-  prescription_type: "online" | "scanned_physical" | "handwritten_scanned";
-  file_url: string;
-  original_filename: string;
-}
+import {
+  getPrescriptions,
+  uploadPrescription,
+  deletePrescription,
+  type Prescription,
+} from "../services/authService";
 
 const typeLabels: Record<string, string> = {
   online: "Online / E-Prescription",
@@ -21,15 +16,10 @@ const typeLabels: Record<string, string> = {
   handwritten_scanned: "Scanned (Handwritten)",
 };
 
-function getAuthHeaders() {
-  const token = localStorage.getItem("token");
-  return { Authorization: `Bearer ${token}` };
-}
-
 function Prescriptions() {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState("");
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [doctorName, setDoctorName] = useState("");
@@ -45,13 +35,11 @@ function Prescriptions() {
   async function loadPrescriptions() {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}/prescriptions`, { headers: getAuthHeaders() });
-      if (!res.ok) throw new Error("Failed to load prescriptions");
-      const data = await res.json();
-      setPrescriptions(data.prescriptions);
-      setError(null);
+      const data = await getPrescriptions();
+      setPrescriptions(data);
+      setError("");
     } catch (err) {
-      console.error(err);
+      console.error("Failed to fetch prescriptions:", err);
       setError("Could not load prescriptions.");
     } finally {
       setLoading(false);
@@ -62,6 +50,23 @@ function Prescriptions() {
     setFile(e.target.files?.[0] ?? null);
   }
 
+  async function handleDelete(id: number) {
+    const prescription = prescriptions.find((p) => p.id === id);
+    if (!prescription) return;
+
+    const confirmed = window.confirm(`Delete this prescription from ${prescription.doctor_name}?`);
+    if (!confirmed) return;
+
+    try {
+      await deletePrescription(id);
+      setPrescriptions((prev) => prev.filter((p) => p.id !== id));
+      setError("");
+    } catch (err) {
+      console.error("Failed to delete prescription:", err);
+      setError("Failed to delete prescription.");
+    }
+  }
+
   async function handleUpload() {
     if (!doctorName || !date || !file) {
       setError("Please fill in all fields and choose a PDF file.");
@@ -69,24 +74,15 @@ function Prescriptions() {
     }
 
     setUploading(true);
-    setError(null);
+    setError("");
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("doctor_name", doctorName);
-      formData.append("prescription_date", date);
-      formData.append("prescription_type", type);
-
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${API_BASE}/prescriptions`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` }, // NOTE: no Content-Type - browser sets it for FormData
-        body: formData,
+      await uploadPrescription({
+        file,
+        doctor_name: doctorName,
+        prescription_date: date,
+        prescription_type: type,
       });
-
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Upload failed");
 
       await loadPrescriptions();
       setIsModalOpen(false);
@@ -94,8 +90,9 @@ function Prescriptions() {
       setDate("");
       setFile(null);
       setType("scanned_physical");
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      console.error("Prescription upload error:", err);
+      setError(err instanceof Error ? err.message : "Failed to upload prescription.");
     } finally {
       setUploading(false);
     }
@@ -117,7 +114,7 @@ function Prescriptions() {
       {error && <div className="error-banner">{error}</div>}
 
       {loading ? (
-        <p>Loading...</p>
+        <p>Loading prescriptions...</p>
       ) : prescriptions.length === 0 ? (
         <div className="empty-state">
           <FileIcon width={32} height={32} />
@@ -127,23 +124,30 @@ function Prescriptions() {
       ) : (
         <div className="card-grid">
           {prescriptions.map((p) => (
-            <a
-              key={p.id}
-              href={`http://localhost:5000${p.file_url}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="prescription-card"
-              style={{ textDecoration: "none" }}
-            >
-              <div className="prescription-card-icon">
-                <FileIcon />
-              </div>
-              <div className="prescription-card-body">
-                <h3>{p.doctor_name}</h3>
-                <p>{p.prescription_date}</p>
-                <span className="prescription-card-file">{typeLabels[p.prescription_type]}</span>
-              </div>
-            </a>
+            <div className="prescription-card" key={p.id}>
+              <a
+                href={`http://localhost:5000${p.file_url}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: "flex", gap: 14, textDecoration: "none", flex: 1 }}
+              >
+                <div className="prescription-card-icon">
+                  <FileIcon />
+                </div>
+                <div className="prescription-card-body">
+                  <h3>{p.doctor_name}</h3>
+                  <p>{p.prescription_date}</p>
+                  <span className="prescription-card-file">{typeLabels[p.prescription_type]}</span>
+                </div>
+              </a>
+              <button
+                className="btn btn-secondary"
+                onClick={() => handleDelete(p.id)}
+                style={{ alignSelf: "flex-start" }}
+              >
+                Delete
+              </button>
+            </div>
           ))}
         </div>
       )}
@@ -199,7 +203,7 @@ function Prescriptions() {
           </div>
 
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
-            <button className="btn btn-secondary" onClick={() => setIsModalOpen(false)}>
+            <button className="btn btn-secondary" onClick={() => setIsModalOpen(false)} disabled={uploading}>
               Cancel
             </button>
             <button className="btn btn-primary" onClick={handleUpload} disabled={uploading}>
