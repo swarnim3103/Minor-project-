@@ -144,7 +144,7 @@ async function migrate() {
 
     console.log('Medicines table created/checked.');
 
-    // 3. Prescriptions
+   // 3. Prescriptions
     await pool.query(`
       CREATE TABLE IF NOT EXISTS prescriptions (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -152,6 +152,8 @@ async function migrate() {
         file_url VARCHAR(500),
         doctor_name VARCHAR(150),
         prescription_date DATE,
+        prescription_type ENUM('online', 'scanned_physical', 'handwritten_scanned') DEFAULT 'scanned_physical',
+        original_filename VARCHAR(255),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
         CONSTRAINT fk_prescriptions_user
