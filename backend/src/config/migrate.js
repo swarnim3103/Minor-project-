@@ -208,6 +208,18 @@ profile_picture_public_id VARCHAR(255) DEFAULT NULL
   )
 `);
 
+console.log('Reminders table created/checked.');
+
+// 5. Medicine catalogue
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS medicine_catalogue (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL UNIQUE
+  )
+`);
+
+console.log('Medicine catalogue table created/checked.');
+
 const [reminderColumns] = await pool.query(
   `SHOW COLUMNS FROM reminders`
 );

@@ -1,3 +1,4 @@
+
 export interface User {
   id: number;
   name: string;
@@ -279,6 +280,32 @@ export async function addMedicine(
 
   return data;
 }
+
+export interface MedicineSuggestion {
+  id: number;
+  name: string;
+}
+
+export const searchMedicineCatalogue = async (
+  query: string
+): Promise<MedicineSuggestion[]> => {
+  const token = localStorage.getItem("token");
+
+  const response = await fetch(
+    `${API_URL}/medicines/search?q=${encodeURIComponent(query)}`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Failed to search medicines");
+  }
+
+  return response.json();
+};
 
 // GET MEDICINES
 export async function getMedicines(): Promise<MedicineResponse[]> {

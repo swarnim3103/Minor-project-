@@ -8,6 +8,8 @@ import {
   deleteMedicine,
   getMedicines,
   updateMedicine,
+  searchMedicineCatalogue,
+  type MedicineSuggestion,
 } from "../services/authService";
 
 const FREQUENCIES = [
@@ -46,14 +48,69 @@ function Medicines() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  // Autocomplete state
+  const [suggestions, setSuggestions] = useState<
+    MedicineSuggestion[]
+  >([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+
+  // Load the user's medicines
   useEffect(() => {
     loadMedicines();
   }, []);
 
+  // Search the medicine catalogue as the user types
+  useEffect(() => {
+    const query = form.name.trim();
+
+    // Don't search when the modal is closed
+    // or fewer than 2 characters have been entered
+    if (!isModalOpen || query.length < 2) {
+      setSuggestions([]);
+      setShowSuggestions(false);
+      setSearchLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const timer = setTimeout(async () => {
+      try {
+        setSearchLoading(true);
+
+        const results = await searchMedicineCatalogue(query);
+
+        if (!cancelled) {
+          setSuggestions(results);
+          setShowSuggestions(true);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          console.error("Medicine search failed:", err);
+          setSuggestions([]);
+          setShowSuggestions(false);
+        }
+      } finally {
+        if (!cancelled) {
+          setSearchLoading(false);
+        }
+      }
+    }, 250);
+
+    // Cancel outdated searches
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [form.name, isModalOpen]);
+
   async function loadMedicines() {
     try {
       setLoading(true);
+
       const data = await getMedicines();
+
       setMedicines(data);
       setError("");
     } catch (err) {
@@ -66,10 +123,15 @@ function Medicines() {
 
   function openAddModal() {
     setEditingId(null);
+
     setForm({
       ...emptyForm,
       start_date: getTodayDate(),
     });
+
+    setSuggestions([]);
+    setShowSuggestions(false);
+    setSearchLoading(false);
     setError("");
     setIsModalOpen(true);
   }
@@ -86,6 +148,9 @@ function Medicines() {
       end_date: medicine.end_date ?? "",
     });
 
+    setSuggestions([]);
+    setShowSuggestions(false);
+    setSearchLoading(false);
     setError("");
     setIsModalOpen(true);
   }
@@ -104,7 +169,10 @@ function Medicines() {
     try {
       await deleteMedicine(id);
 
-      setMedicines((prev) => prev.filter((m) => m.id !== id));
+      setMedicines((prev) =>
+        prev.filter((m) => m.id !== id)
+      );
+
       setError("");
     } catch (err) {
       console.error("Failed to delete medicine:", err);
@@ -130,9 +198,9 @@ function Medicines() {
     }
 
     if (form.start_date < getTodayDate()) {
-  setError("Start date cannot be before today.");
-  return;
-}
+      setError("Start date cannot be before today.");
+      return;
+    }
 
     if (form.end_date && form.end_date < form.start_date) {
       setError("End date cannot be before start date.");
@@ -178,6 +246,8 @@ function Medicines() {
 
       setIsModalOpen(false);
       setForm(emptyForm);
+      setSuggestions([]);
+      setShowSuggestions(false);
     } catch (err) {
       console.error("Medicine save error:", err);
 
@@ -199,7 +269,10 @@ function Medicines() {
           <p>Add and track every medicine in your regimen.</p>
         </div>
 
-        <button className="btn btn-primary" onClick={openAddModal}>
+        <button
+          className="btn btn-primary"
+          onClick={openAddModal}
+        >
           <PlusIcon width={16} height={16} />
           Add Medicine
         </button>
@@ -218,8 +291,6 @@ function Medicines() {
           <p>
             Add your first medicine to start getting reminders.
           </p>
-
-          
         </div>
       ) : (
         <div className="card-grid">
@@ -237,26 +308,86 @@ function Medicines() {
       {isModalOpen && (
         <Modal
           title={editingId !== null ? "Edit Medicine" : "Add Medicine"}
-          onClose={() => setIsModalOpen(false)}
+          onClose={() => {
+            setIsModalOpen(false);
+            setShowSuggestions(false);
+          }}
         >
           <form id="medicine-form" onSubmit={handleSubmit}>
-            <div className="form-field">
+            {/* Medicine name with autocomplete */}
+            <div className="form-field medicine-autocomplete">
               <label htmlFor="med-name">Medicine name</label>
 
               <input
                 id="med-name"
                 value={form.name}
-                onChange={(e) =>
+                onChange={(e) => {
                   setForm({
                     ...form,
                     name: e.target.value,
-                  })
-                }
-                placeholder="e.g. Metformin"
+                  });
+
+                  setShowSuggestions(true);
+                }}
+                onFocus={() => {
+                  if (form.name.trim().length >= 2) {
+                    setShowSuggestions(true);
+                  }
+                }}
+                onBlur={() => {
+                  // Allow a suggestion click before closing
+                  setTimeout(() => {
+                    setShowSuggestions(false);
+                  }, 150);
+                }}
+                placeholder="Start typing a medicine name"
+                autoComplete="off"
                 required
               />
+
+              {showSuggestions &&
+                form.name.trim().length >= 2 && (
+                  <div className="medicine-suggestions">
+                    {searchLoading && (
+                      <div className="medicine-suggestion-message">
+                        Searching...
+                      </div>
+                    )}
+
+                    {!searchLoading &&
+                      suggestions.length > 0 &&
+                      suggestions.map((suggestion) => (
+                        <button
+                          key={suggestion.id}
+                          type="button"
+                          className="medicine-suggestion"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => {
+                            setForm({
+                              ...form,
+                              name: suggestion.name,
+                            });
+
+                            setSuggestions([]);
+                            setShowSuggestions(false);
+                          }}
+                        >
+                          {suggestion.name}
+                        </button>
+                      ))}
+
+                    {!searchLoading &&
+                      suggestions.length === 0 && (
+                        <div className="medicine-suggestion-message">
+                          No matches found. You can enter your own
+                          medicine name.
+                        </div>
+                      )}
+                  </div>
+                )}
             </div>
 
+            {/* Dosage and frequency */}
             <div className="form-row">
               <div className="form-field">
                 <label htmlFor="med-dosage">Dosage</label>
@@ -302,6 +433,7 @@ function Medicines() {
               </div>
             </div>
 
+            {/* Instructions */}
             <div className="form-field">
               <label htmlFor="med-instructions">
                 Instructions (optional)
@@ -321,25 +453,24 @@ function Medicines() {
               />
             </div>
 
+            {/* Start and end dates */}
             <div className="form-row">
               <div className="form-field">
-                <label htmlFor="med-start">
-                  Start date
-                </label>
+                <label htmlFor="med-start">Start date</label>
 
                 <input
-  id="med-start"
-  type="date"
-  value={form.start_date}
-  min={getTodayDate()}
-  onChange={(e) =>
-    setForm({
-      ...form,
-      start_date: e.target.value,
-    })
-  }
-  required
-/>
+                  id="med-start"
+                  type="date"
+                  value={form.start_date}
+                  min={getTodayDate()}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      start_date: e.target.value,
+                    })
+                  }
+                  required
+                />
               </div>
 
               <div className="form-field">
@@ -363,6 +494,7 @@ function Medicines() {
             </div>
           </form>
 
+          {/* Form buttons */}
           <div
             style={{
               display: "flex",
@@ -373,7 +505,11 @@ function Medicines() {
           >
             <button
               className="btn btn-secondary"
-              onClick={() => setIsModalOpen(false)}
+              type="button"
+              onClick={() => {
+                setIsModalOpen(false);
+                setShowSuggestions(false);
+              }}
               disabled={submitting}
             >
               Cancel
