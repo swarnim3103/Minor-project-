@@ -1,9 +1,9 @@
 const path = require("path");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-const { embedText } = require("../embed");
-const { loadStore, search } = require("../vectorstore");
+const { embedText } = require("./embed");
+const { loadStore, search } = require("./vectorstore");
 
-const STORE_PATH = path.join(__dirname, "..", "data", "embeddings.json");
+const STORE_PATH = path.join(__dirname, "data", "embeddings.json");
 const TOP_K = 4;
 
 const SYSTEM_PROMPT = `You are a medical information assistant. You answer ONLY using the
@@ -15,13 +15,12 @@ reference material provided in each message's context. Rules:
   decisions, diagnosis, or treatment.
 - Be clear, concise, and avoid medical jargon where possible.`;
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY_CHATBOT);
 const model = genAI.getGenerativeModel({
-  model: "gemini-2.0-flash",
+  model: "gemini-3.8-flash",
   systemInstruction: SYSTEM_PROMPT,
 });
 
-// Loaded lazily, cached in memory after the first request.
 let storeCache = null;
 function getStore() {
   if (!storeCache) storeCache = loadStore(STORE_PATH);
@@ -37,7 +36,7 @@ function buildPrompt(question, contextChunks) {
 
 // POST /api/chat  { "question": "..." }
 async function chat(req, res) {
-  const { question } = req.body || {};
+  const { message: question } = req.body || {};
 
   if (!question || typeof question !== "string" || !question.trim()) {
     return res.status(400).json({ error: "Field 'question' (non-empty string) is required." });
@@ -59,7 +58,7 @@ async function chat(req, res) {
       sources: topChunks.map((c) => c.source),
     });
   } catch (err) {
-    console.error("Chat controller error:", err);
+    console.error("Chat error:", err);
     res.status(500).json({ error: "Something went wrong answering the question." });
   }
 }
