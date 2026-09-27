@@ -13,18 +13,20 @@ const app = express();
 const { startReminderScheduler } = require('./jobs/reminderScheduler');
 const path = require('path');
 const prescriptionRoutes = require('./routes/prescription.routes');
-app.use('/api/prescriptions', prescriptionRoutes);
-app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); 
+const historyRoutes = require('./routes/history.routes');
+const chatRoutes = require("./routes/chat.routes");
 app.use(cors());
 app.use(express.json());
+app.use('/api/prescriptions', prescriptionRoutes);
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); 
+
 app.use('/api', testCallRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use("/api/medicines", medicineRoutes);
 app.use('/api/otp', otpRoutes);
 app.use('/api/reminders', reminderRoutes);
-const historyRoutes = require('./routes/history.routes');
-const chatRoutes = require("./routes/chat.routes");
+
 app.use('/api/chat', chatRoutes);
 app.use('/api/history', historyRoutes);
 

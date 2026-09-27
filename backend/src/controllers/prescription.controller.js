@@ -1,11 +1,8 @@
 const pool = require('../config/db');
 const fs = require('fs');
 const path = require('path');
+const { generatePrescriptionSummary } = require('../utils/prescriptionAi.util');
 
-/**
- * POST /api/prescriptions
- * multipart/form-data: file, doctor_name, prescription_date, prescription_type
- */
 async function uploadPrescription(req, res) {
   try {
     const userId = req.user.id;
@@ -16,7 +13,6 @@ async function uploadPrescription(req, res) {
     }
 
     if (!doctor_name || !prescription_date) {
-      // clean up the uploaded file since we're rejecting the request
       fs.unlink(req.file.path, () => {});
       return res.status(400).json({ error: 'doctor_name and prescription_date are required' });
     }
@@ -24,14 +20,25 @@ async function uploadPrescription(req, res) {
     const validTypes = ['online', 'scanned_physical', 'handwritten_scanned'];
     const type = validTypes.includes(prescription_type) ? prescription_type : 'scanned_physical';
 
-    // Store relative path (servable via express static route)
     const relativePath = `/uploads/prescriptions/${req.file.filename}`;
+
+    // Generate the AI summary before saving, so the summary is ready
+    // as soon as the upload response comes back. A failure here doesn't
+    // block the upload — it just leaves ai_summary_status = 'failed'.
+    let aiSummary = null;
+    let aiSummaryStatus = 'failed';
+    try {
+      aiSummary = await generatePrescriptionSummary(req.file.path);
+      aiSummaryStatus = 'completed';
+    } catch (aiErr) {
+      console.error('[prescription.upload] AI summary generation failed:', aiErr.message);
+    }
 
     const [result] = await pool.query(
       `INSERT INTO prescriptions
-        (user_id, file_url, doctor_name, prescription_date, prescription_type, original_filename)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [userId, relativePath, doctor_name, prescription_date, type, req.file.originalname]
+        (user_id, file_url, doctor_name, prescription_date, prescription_type, original_filename, ai_summary, ai_summary_status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [userId, relativePath, doctor_name, prescription_date, type, req.file.originalname, aiSummary, aiSummaryStatus]
     );
 
     return res.status(201).json({
@@ -43,6 +50,8 @@ async function uploadPrescription(req, res) {
         prescription_type: type,
         file_url: relativePath,
         original_filename: req.file.originalname,
+        ai_summary: aiSummary,
+        ai_summary_status: aiSummaryStatus,
       },
     });
   } catch (err) {
@@ -51,15 +60,13 @@ async function uploadPrescription(req, res) {
   }
 }
 
-/**
- * GET /api/prescriptions
- */
 async function getPrescriptions(req, res) {
   try {
     const userId = req.user.id;
 
     const [rows] = await pool.query(
-      `SELECT id, doctor_name, prescription_date, prescription_type, file_url, original_filename, created_at
+      `SELECT id, doctor_name, prescription_date, prescription_type, file_url, original_filename,
+              ai_summary, ai_summary_status, created_at
        FROM prescriptions
        WHERE user_id = ?
        ORDER BY prescription_date DESC`,
@@ -73,9 +80,6 @@ async function getPrescriptions(req, res) {
   }
 }
 
-/**
- * DELETE /api/prescriptions/:id
- */
 async function deletePrescription(req, res) {
   try {
     const userId = req.user.id;
