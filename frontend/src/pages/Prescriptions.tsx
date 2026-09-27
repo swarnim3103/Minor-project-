@@ -16,17 +16,32 @@ const typeLabels: Record<string, string> = {
   handwritten_scanned: "Scanned (Handwritten)",
 };
 
+function formatDate(dateStr: string) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("en-IN", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+function truncate(text: string, max: number) {
+  return text.length > max ? text.slice(0, max).trim() + "…" : text;
+}
+
 function Prescriptions() {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [doctorName, setDoctorName] = useState("");
   const [date, setDate] = useState("");
   const [type, setType] = useState<Prescription["prescription_type"]>("scanned_physical");
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+
+  const [selectedPrescription, setSelectedPrescription] = useState<Prescription | null>(null);
 
   useEffect(() => {
     loadPrescriptions();
@@ -60,6 +75,7 @@ function Prescriptions() {
     try {
       await deletePrescription(id);
       setPrescriptions((prev) => prev.filter((p) => p.id !== id));
+      if (selectedPrescription?.id === id) setSelectedPrescription(null);
       setError("");
     } catch (err) {
       console.error("Failed to delete prescription:", err);
@@ -85,7 +101,7 @@ function Prescriptions() {
       });
 
       await loadPrescriptions();
-      setIsModalOpen(false);
+      setIsUploadModalOpen(false);
       setDoctorName("");
       setDate("");
       setFile(null);
@@ -105,7 +121,7 @@ function Prescriptions() {
           <h2>Prescriptions</h2>
           <p>Keep digital copies of your prescriptions in one secure place.</p>
         </div>
-        <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
+        <button className="btn btn-primary" onClick={() => setIsUploadModalOpen(true)}>
           <PlusIcon width={16} height={16} />
           Upload Prescription
         </button>
@@ -124,36 +140,50 @@ function Prescriptions() {
       ) : (
         <div className="card-grid">
           {prescriptions.map((p) => (
-            <div className="prescription-card" key={p.id}>
-              <a
-                href={`http://localhost:5000${p.file_url}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ display: "flex", gap: 14, textDecoration: "none", flex: 1 }}
-              >
+            <div
+              className="prescription-card"
+              key={p.id}
+              onClick={() => setSelectedPrescription(p)}
+              style={{ cursor: "pointer", flexDirection: "column", alignItems: "stretch" }}
+            >
+              <div style={{ display: "flex", gap: 14 }}>
                 <div className="prescription-card-icon">
                   <FileIcon />
                 </div>
-                <div className="prescription-card-body">
+                <div className="prescription-card-body" style={{ flex: 1 }}>
                   <h3>{p.doctor_name}</h3>
-                  <p>{p.prescription_date}</p>
+                  <p>{formatDate(p.prescription_date)}</p>
                   <span className="prescription-card-file">{typeLabels[p.prescription_type]}</span>
                 </div>
-              </a>
-              <button
-                className="btn btn-secondary"
-                onClick={() => handleDelete(p.id)}
-                style={{ alignSelf: "flex-start" }}
-              >
-                Delete
-              </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDelete(p.id);
+                  }}
+                  style={{ alignSelf: "flex-start" }}
+                >
+                  Delete
+                </button>
+              </div>
+
+              {p.ai_summary_status === "completed" && p.ai_summary && (
+                <p style={{ fontSize: 13, color: "var(--color-text-muted)", marginTop: 10 }}>
+                  {truncate(p.ai_summary, 100)}
+                </p>
+              )}
+              {p.ai_summary_status === "failed" && (
+                <p style={{ fontSize: 12.5, color: "var(--color-text-muted)", marginTop: 10, fontStyle: "italic" }}>
+                  Summary unavailable
+                </p>
+              )}
             </div>
           ))}
         </div>
       )}
 
-      {isModalOpen && (
-        <Modal title="Upload Prescription" onClose={() => setIsModalOpen(false)}>
+      {isUploadModalOpen && (
+        <Modal title="Upload Prescription" onClose={() => setIsUploadModalOpen(false)}>
           <div className="form-field">
             <label htmlFor="doc-name">Doctor's name</label>
             <input
@@ -203,13 +233,41 @@ function Prescriptions() {
           </div>
 
           <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
-            <button className="btn btn-secondary" onClick={() => setIsModalOpen(false)} disabled={uploading}>
+            <button className="btn btn-secondary" onClick={() => setIsUploadModalOpen(false)} disabled={uploading}>
               Cancel
             </button>
             <button className="btn btn-primary" onClick={handleUpload} disabled={uploading}>
-              {uploading ? "Uploading..." : "Upload"}
+              {uploading ? "Uploading & summarizing..." : "Upload"}
             </button>
           </div>
+        </Modal>
+      )}
+
+      {selectedPrescription && (
+        <Modal title={selectedPrescription.doctor_name} onClose={() => setSelectedPrescription(null)}>
+          <p style={{ color: "var(--color-text-muted)", marginBottom: 12 }}>
+            {formatDate(selectedPrescription.prescription_date)} &middot;{" "}
+            {typeLabels[selectedPrescription.prescription_type]}
+          </p>
+
+          <h4 style={{ marginBottom: 6 }}>Summary</h4>
+          {selectedPrescription.ai_summary_status === "completed" && selectedPrescription.ai_summary ? (
+            <p style={{ marginBottom: 16 }}>{selectedPrescription.ai_summary}</p>
+          ) : (
+            <p style={{ marginBottom: 16, fontStyle: "italic", color: "var(--color-text-muted)" }}>
+              A summary could not be generated for this prescription.
+            </p>
+          )}
+
+          <a
+            href={`http://localhost:5000${selectedPrescription.file_url}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="btn btn-primary"
+            style={{ display: "inline-flex" }}
+          >
+            View Prescription
+          </a>
         </Modal>
       )}
     </div>

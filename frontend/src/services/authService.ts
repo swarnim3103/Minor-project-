@@ -485,6 +485,8 @@ export interface Prescription {
   prescription_type: "online" | "scanned_physical" | "handwritten_scanned";
   file_url: string;
   original_filename: string;
+  ai_summary: string | null;
+  ai_summary_status: "completed" | "failed" | null;
 }
 
 export async function getPrescriptions(): Promise<Prescription[]> {
