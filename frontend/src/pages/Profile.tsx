@@ -1,4 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type CSSProperties,
+  type FormEvent,
+} from "react";
+
 import {
   getMyProfile,
   uploadProfilePicture,
@@ -6,9 +15,13 @@ import {
   deleteMyAccount,
   type UserProfile,
 } from "../services/authService";
+
+import { useAuth } from "../context/AuthContext";
 import "../styles/shared.css";
 
 function Profile() {
+  const { updateUser } = useAuth();
+
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -23,6 +36,7 @@ function Profile() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Load the user's profile.
   useEffect(() => {
     async function loadProfile() {
       try {
@@ -31,6 +45,15 @@ function Profile() {
 
         const data = await getMyProfile();
         setProfile(data);
+
+        // Keep the navbar profile picture in sync
+        // with the profile returned by the backend.
+        updateUser({
+          profile_picture_url: data.profile_picture_url ?? null,
+          name: data.name,
+          email: data.email,
+          role: data.role,
+        });
       } catch (err) {
         setError(
           err instanceof Error
@@ -43,7 +66,7 @@ function Profile() {
     }
 
     loadProfile();
-  }, []);
+  }, [updateUser]);
 
   const initials = (name: string) =>
     name
@@ -70,15 +93,21 @@ function Profile() {
     });
   };
 
+  // Upload or change profile picture.
   const handlePictureUpload = async (
-    event: React.ChangeEvent<HTMLInputElement>
+    event: ChangeEvent<HTMLInputElement>
   ) => {
     const file = event.target.files?.[0];
 
-    // Allow choosing the same file again later.
+    // Allow the same file to be selected again.
     event.target.value = "";
 
     if (!file) return;
+
+    setError("");
+    setMessage("");
+
+    const MAX_SIZE = 5 * 1024 * 1024;
 
     const allowedTypes = [
       "image/jpeg",
@@ -86,44 +115,57 @@ function Profile() {
       "image/webp",
     ];
 
+    // Validate image format.
     if (!allowedTypes.includes(file.type)) {
-      setError("Choose a JPG, PNG, or WebP image.");
+      setError(
+        "Unsupported image format. Please upload a JPG, PNG, or WEBP image."
+      );
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setError("The image must be smaller than 5 MB.");
+    // Validate image size.
+    if (file.size > MAX_SIZE) {
+      setError(
+        "Image size must be 5 MB or less. Please choose a smaller image."
+      );
       return;
     }
 
     try {
       setUploading(true);
-      setError("");
-      setMessage("");
 
       const result = await uploadProfilePicture(file);
 
+      const imageUrl = result.profile_picture_url;
+
+      // Update the Profile page.
       setProfile((current) =>
         current
           ? {
               ...current,
-              profile_picture_url: result.profile_picture_url,
+              profile_picture_url: imageUrl,
             }
           : current
       );
+
+      // Update the navbar immediately.
+      updateUser({
+        profile_picture_url: imageUrl,
+      });
 
       setMessage("Profile picture updated successfully.");
     } catch (err) {
       setError(
         err instanceof Error
           ? err.message
-          : "Could not upload profile picture."
+          : "Could not upload profile picture. Please try again."
       );
     } finally {
       setUploading(false);
     }
   };
 
+  // Remove profile picture.
   const handleRemovePicture = async () => {
     const confirmed = window.confirm(
       "Are you sure you want to remove your profile picture?"
@@ -138,11 +180,20 @@ function Profile() {
 
       await removeProfilePicture();
 
+      // Remove picture from the Profile page.
       setProfile((current) =>
         current
-          ? { ...current, profile_picture_url: null }
+          ? {
+              ...current,
+              profile_picture_url: null,
+            }
           : current
       );
+
+      // Remove picture from the navbar.
+      updateUser({
+        profile_picture_url: null,
+      });
 
       setMessage("Profile picture removed.");
     } catch (err) {
@@ -156,8 +207,9 @@ function Profile() {
     }
   };
 
+  // Delete account.
   const handleDeleteAccount = async (
-    event: React.FormEvent<HTMLFormElement>
+    event: FormEvent<HTMLFormElement>
   ) => {
     event.preventDefault();
 
@@ -173,7 +225,8 @@ function Profile() {
 
       await deleteMyAccount(deletePassword);
 
-      // Clear the session only after the server confirms deletion.
+      // Clear the session only after the server
+      // confirms that the account was deleted.
       localStorage.removeItem("token");
       localStorage.removeItem("user");
       localStorage.removeItem("users");
@@ -185,6 +238,7 @@ function Profile() {
           ? err.message
           : "Could not delete your account."
       );
+
       setDeletingAccount(false);
     }
   };
@@ -202,6 +256,7 @@ function Profile() {
             <p>View and manage your MedCare account.</p>
           </div>
         </div>
+
         <div className="error-banner">{error}</div>
       </div>
     );
@@ -211,7 +266,7 @@ function Profile() {
     return <p>Profile information is unavailable.</p>;
   }
 
-  const cardStyle: React.CSSProperties = {
+  const cardStyle: CSSProperties = {
     background: "#ffffff",
     border: "1px solid #e2e8f0",
     borderRadius: 16,
@@ -219,7 +274,7 @@ function Profile() {
     marginBottom: 24,
   };
 
-  const buttonStyle: React.CSSProperties = {
+  const buttonStyle: CSSProperties = {
     border: "1px solid #cbd5e1",
     borderRadius: 8,
     padding: "10px 14px",
@@ -238,12 +293,18 @@ function Profile() {
         </div>
       </div>
 
+      {/* Error message */}
       {error && (
-        <div className="error-banner" style={{ marginBottom: 16 }}>
+        <div
+          className="error-banner"
+          role="alert"
+          style={{ marginBottom: 16 }}
+        >
           {error}
         </div>
       )}
 
+      {/* Success message */}
       {message && (
         <div
           role="status"
@@ -274,6 +335,10 @@ function Profile() {
           <img
             src={profile.profile_picture_url}
             alt={`${profile.name}'s profile`}
+            onError={(event) => {
+              // If the image cannot load, show initials.
+              event.currentTarget.style.display = "none";
+            }}
             style={{
               width: 90,
               height: 90,
@@ -328,7 +393,13 @@ function Profile() {
             Member since {formatDate(profile.created_at)}
           </p>
 
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <div
+            style={{
+              display: "flex",
+              gap: 10,
+              flexWrap: "wrap",
+            }}
+          >
             <input
               ref={fileInputRef}
               type="file"
@@ -357,10 +428,23 @@ function Profile() {
                 disabled={uploading || removingPicture}
                 onClick={handleRemovePicture}
               >
-                {removingPicture ? "Removing..." : "Remove picture"}
+                {removingPicture
+                  ? "Removing..."
+                  : "Remove picture"}
               </button>
             )}
           </div>
+
+          {/* Image upload instructions */}
+          <p
+            style={{
+              margin: "10px 0 0",
+              fontSize: 12,
+              color: "#64748b",
+            }}
+          >
+            Allowed formats: JPG, PNG, WEBP. Maximum size: 5 MB.
+          </p>
         </div>
       </div>
 
@@ -379,13 +463,17 @@ function Profile() {
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(230px, 1fr))",
             gap: 22,
           }}
         >
           <InfoField label="Full name" value={profile.name} />
 
-          <InfoField label="Email address" value={profile.email} />
+          <InfoField
+            label="Email address"
+            value={profile.email}
+          />
 
           <InfoField
             label="Phone number"
@@ -469,7 +557,13 @@ function Profile() {
               }}
             />
 
-            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <div
+              style={{
+                display: "flex",
+                gap: 10,
+                flexWrap: "wrap",
+              }}
+            >
               <button
                 type="submit"
                 disabled={deletingAccount || !deletePassword}

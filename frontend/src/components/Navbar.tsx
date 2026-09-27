@@ -23,6 +23,37 @@ function initials(name: string) {
     .join("");
 }
 
+function ProfileAvatar({
+  name,
+  imageUrl,
+  className,
+}: {
+  name: string;
+  imageUrl?: string | null;
+  className: string;
+}) {
+  const [imageError, setImageError] = useState(false);
+
+  useEffect(() => {
+    setImageError(false);
+  }, [imageUrl]);
+
+  return (
+    <div className={className}>
+      {imageUrl && !imageError ? (
+        <img
+          src={imageUrl}
+          alt={`${name}'s profile`}
+          className="navbar-profile-image"
+          onError={() => setImageError(true)}
+        />
+      ) : (
+        initials(name || "User") || "?"
+      )}
+    </div>
+  );
+}
+
 interface NavbarProps {
   onMenuClick: () => void;
 }
@@ -101,9 +132,11 @@ function Navbar({ onMenuClick }: NavbarProps) {
             aria-expanded={profileOpen}
           >
 
-            <div className="navbar-avatar">
-              {user ? initials(user.name) : "?"}
-            </div>
+            <ProfileAvatar
+  name={user?.name ?? "User"}
+  imageUrl={user?.profile_picture_url}
+  className="navbar-avatar"
+/>
 
             <div className="navbar-user-info">
               <span className="navbar-user-name">
@@ -133,9 +166,11 @@ function Navbar({ onMenuClick }: NavbarProps) {
               {/* Profile information */}
               <div className="profile-dropdown-header">
 
-                <div className="profile-dropdown-avatar">
-                  {user ? initials(user.name) : "?"}
-                </div>
+                <ProfileAvatar
+  name={user?.name ?? "User"}
+  imageUrl={user?.profile_picture_url}
+  className="profile-dropdown-avatar"
+/>
 
                 <div className="profile-dropdown-info">
 
