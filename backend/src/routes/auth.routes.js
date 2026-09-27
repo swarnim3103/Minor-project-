@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/auth.controller');
 const { authenticate } = require('../middleware/auth');
+const upload = require('../middleware/profileUpload');
 
 console.log('authController keys:', Object.keys(authController));
 console.log('register is:', typeof authController.register);
@@ -9,6 +10,25 @@ console.log('register is:', typeof authController.register);
 router.post('/register', authController.register);
 router.post('/login', authController.login);
 router.get('/me', authenticate, authController.getProfile);
+
+router.post(
+  '/me/profile-picture',
+  authenticate,
+  upload.single('image'),
+  authController.uploadProfilePicture
+);
+
+router.delete(
+  '/me/profile-picture',
+  authenticate,
+  authController.removeProfilePicture
+);
+
+router.delete(
+  '/me',
+  authenticate,
+  authController.deleteAccount
+);
 
 router.post('/send-email-otp', authController.sendEmailOtp);
 router.post('/verify-email-otp', authController.verifyEmailOtp);

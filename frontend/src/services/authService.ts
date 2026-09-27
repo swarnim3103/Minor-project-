@@ -36,6 +36,123 @@ export async function loginUser(
   return data;
 }
 
+// =========================================================
+// USER PROFILE
+// =========================================================
+
+export interface UserProfile {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  phone_number: string | null;
+  created_at: string;
+  profile_picture_url: string | null;
+  profile_picture_public_id?: string | null;
+}
+
+export async function getMyProfile(): Promise<UserProfile> {
+  const token = localStorage.getItem("token");
+
+  const response = await fetch(`${API_URL}/auth/me`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to fetch profile");
+  }
+
+  return data.user;
+}
+
+// =========================================================
+// PROFILE PICTURE
+// =========================================================
+
+export async function uploadProfilePicture(
+  file: File
+): Promise<{ message: string; profile_picture_url: string }> {
+  const token = localStorage.getItem("token");
+  const formData = new FormData();
+
+  formData.append("image", file);
+
+  const response = await fetch(
+    `${API_URL}/auth/me/profile-picture`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to upload profile picture");
+  }
+
+  return data;
+}
+
+export async function removeProfilePicture(): Promise<{
+  message: string;
+}> {
+  const token = localStorage.getItem("token");
+
+  const response = await fetch(
+    `${API_URL}/auth/me/profile-picture`,
+    {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to remove profile picture");
+  }
+
+  return data;
+}
+
+// =========================================================
+// DELETE ACCOUNT
+// =========================================================
+
+export async function deleteMyAccount(
+  password: string
+): Promise<{ message: string }> {
+  const token = localStorage.getItem("token");
+
+  const response = await fetch(`${API_URL}/auth/me`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ password }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to delete account");
+  }
+
+  return data;
+}
+
 export interface RegisterPayload {
   name: string;
   email: string;

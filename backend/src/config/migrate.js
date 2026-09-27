@@ -27,7 +27,10 @@ async function migrate() {
         phone_otp_expiry DATETIME DEFAULT NULL,
 
         reset_otp VARCHAR(6) DEFAULT NULL,
-        reset_otp_expiry DATETIME DEFAULT NULL
+        reset_otp_expiry DATETIME DEFAULT NULL,
+
+        profile_picture_url VARCHAR(500) DEFAULT NULL,
+profile_picture_public_id VARCHAR(255) DEFAULT NULL
       )
     `);
 
@@ -48,6 +51,20 @@ async function migrate() {
           ADD COLUMN phone_number VARCHAR(20) DEFAULT NULL
         `
       },
+      {
+  name: 'profile_picture_url',
+  sql: `
+    ALTER TABLE users
+    ADD COLUMN profile_picture_url VARCHAR(500) DEFAULT NULL
+  `
+},
+{
+  name: 'profile_picture_public_id',
+  sql: `
+    ALTER TABLE users
+    ADD COLUMN profile_picture_public_id VARCHAR(255) DEFAULT NULL
+  `
+},
       {
         name: 'role',
         sql: `
@@ -144,7 +161,7 @@ async function migrate() {
 
     console.log('Medicines table created/checked.');
 
-   // 3. Prescriptions
+       // 3. Prescriptions
     await pool.query(`
       CREATE TABLE IF NOT EXISTS prescriptions (
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -233,6 +250,8 @@ if (!existingReminderColumns.includes("day_of_week")) {
           ON DELETE CASCADE
       )
     `);
+
+
 
     console.log('Reminder logs table created/checked.');
 
