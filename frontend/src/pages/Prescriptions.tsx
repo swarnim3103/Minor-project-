@@ -1,5 +1,6 @@
 import { useState, useEffect, type ChangeEvent } from "react";
 import Modal from "../components/Modal";
+import ScanCapture from "../components/ScanCapture";
 import { PlusIcon, FileIcon, UploadIcon } from "../components/icons";
 import "../styles/shared.css";
 import "./Prescriptions.css";
@@ -29,12 +30,15 @@ function truncate(text: string, max: number) {
   return text.length > max ? text.slice(0, max).trim() + "…" : text;
 }
 
+type UploadMode = "choose" | "file" | "scan";
+
 function Prescriptions() {
   const [prescriptions, setPrescriptions] = useState<Prescription[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [uploadMode, setUploadMode] = useState<UploadMode>("choose");
   const [doctorName, setDoctorName] = useState("");
   const [date, setDate] = useState("");
   const [type, setType] = useState<Prescription["prescription_type"]>("scanned_physical");
@@ -65,6 +69,20 @@ function Prescriptions() {
     setFile(e.target.files?.[0] ?? null);
   }
 
+  function handleScanCapture(scannedFile: File) {
+    setFile(scannedFile);
+    setUploadMode("file"); // reuse the same form fields (doctor, date, type) after scanning
+  }
+
+  function resetUploadModal() {
+    setIsUploadModalOpen(false);
+    setUploadMode("choose");
+    setDoctorName("");
+    setDate("");
+    setFile(null);
+    setType("scanned_physical");
+  }
+
   async function handleDelete(id: number) {
     const prescription = prescriptions.find((p) => p.id === id);
     if (!prescription) return;
@@ -85,7 +103,7 @@ function Prescriptions() {
 
   async function handleUpload() {
     if (!doctorName || !date || !file) {
-      setError("Please fill in all fields and choose a PDF file.");
+      setError("Please fill in all fields and choose or scan a file.");
       return;
     }
 
@@ -101,11 +119,7 @@ function Prescriptions() {
       });
 
       await loadPrescriptions();
-      setIsUploadModalOpen(false);
-      setDoctorName("");
-      setDate("");
-      setFile(null);
-      setType("scanned_physical");
+      resetUploadModal();
     } catch (err) {
       console.error("Prescription upload error:", err);
       setError(err instanceof Error ? err.message : "Failed to upload prescription.");
@@ -183,63 +197,86 @@ function Prescriptions() {
       )}
 
       {isUploadModalOpen && (
-        <Modal title="Upload Prescription" onClose={() => setIsUploadModalOpen(false)}>
-          <div className="form-field">
-            <label htmlFor="doc-name">Doctor's name</label>
-            <input
-              id="doc-name"
-              value={doctorName}
-              onChange={(e) => setDoctorName(e.target.value)}
-              placeholder="e.g. Dr. Ananya Sharma"
-            />
-          </div>
+        <Modal title="Upload Prescription" onClose={resetUploadModal}>
+          {uploadMode === "choose" && (
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <p style={{ color: "var(--color-text-muted)", marginBottom: 4 }}>
+                How would you like to add this prescription?
+              </p>
+              <button className="btn btn-primary" onClick={() => setUploadMode("file")}>
+                <UploadIcon width={16} height={16} />
+                Upload a PDF File
+              </button>
+              <button className="btn btn-secondary" onClick={() => setUploadMode("scan")}>
+                Scan with Camera
+              </button>
+            </div>
+          )}
 
-          <div className="form-field">
-            <label htmlFor="rx-date">Prescription date</label>
-            <input
-              id="rx-date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </div>
+          {uploadMode === "scan" && (
+            <ScanCapture onCapture={handleScanCapture} onClose={() => setUploadMode("choose")} />
+          )}
 
-          <div className="form-field">
-            <label htmlFor="rx-type">Prescription type</label>
-            <select
-              id="rx-type"
-              value={type}
-              onChange={(e) => setType(e.target.value as Prescription["prescription_type"])}
-            >
-              <option value="online">Online / E-Prescription</option>
-              <option value="scanned_physical">Scanned (Printed)</option>
-              <option value="handwritten_scanned">Scanned (Handwritten)</option>
-            </select>
-          </div>
+          {uploadMode === "file" && (
+            <>
+              <div className="form-field">
+                <label htmlFor="doc-name">Doctor's name</label>
+                <input
+                  id="doc-name"
+                  value={doctorName}
+                  onChange={(e) => setDoctorName(e.target.value)}
+                  placeholder="e.g. Dr. Ananya Sharma"
+                />
+              </div>
 
-          <div className="form-field">
-            <label htmlFor="rx-file">File (PDF only)</label>
-            <label className="prescription-upload-box" htmlFor="rx-file">
-              <UploadIcon width={20} height={20} />
-              <span>{file?.name || "Click to choose a PDF file"}</span>
-            </label>
-            <input
-              id="rx-file"
-              type="file"
-              accept="application/pdf"
-              onChange={handleFileChange}
-              style={{ display: "none" }}
-            />
-          </div>
+              <div className="form-field">
+                <label htmlFor="rx-date">Prescription date</label>
+                <input
+                  id="rx-date"
+                  type="date"
+                  value={date}
+                  onChange={(e) => setDate(e.target.value)}
+                />
+              </div>
 
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
-            <button className="btn btn-secondary" onClick={() => setIsUploadModalOpen(false)} disabled={uploading}>
-              Cancel
-            </button>
-            <button className="btn btn-primary" onClick={handleUpload} disabled={uploading}>
-              {uploading ? "Uploading & summarizing..." : "Upload"}
-            </button>
-          </div>
+              <div className="form-field">
+                <label htmlFor="rx-type">Prescription type</label>
+                <select
+                  id="rx-type"
+                  value={type}
+                  onChange={(e) => setType(e.target.value as Prescription["prescription_type"])}
+                >
+                  <option value="online">Online / E-Prescription</option>
+                  <option value="scanned_physical">Scanned (Printed)</option>
+                  <option value="handwritten_scanned">Scanned (Handwritten)</option>
+                </select>
+              </div>
+
+              <div className="form-field">
+                <label htmlFor="rx-file">File (PDF only)</label>
+                <label className="prescription-upload-box" htmlFor="rx-file">
+                  <UploadIcon width={20} height={20} />
+                  <span>{file?.name || "Click to choose a PDF file"}</span>
+                </label>
+                <input
+                  id="rx-file"
+                  type="file"
+                  accept="application/pdf"
+                  onChange={handleFileChange}
+                  style={{ display: "none" }}
+                />
+              </div>
+
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
+                <button className="btn btn-secondary" onClick={() => setUploadMode("choose")} disabled={uploading}>
+                  Back
+                </button>
+                <button className="btn btn-primary" onClick={handleUpload} disabled={uploading}>
+                  {uploading ? "Uploading & summarizing..." : "Upload"}
+                </button>
+              </div>
+            </>
+          )}
         </Modal>
       )}
 
