@@ -112,3 +112,159 @@
   border-color: var(--color-primary);
   background: var(--color-surface);
 }
+.chatbot-mic-button {
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--border-color);
+  border-radius: 50%;
+  background: var(--card-background);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  transition: all 0.2s ease;
+}
+
+.chatbot-mic-button:hover {
+  transform: scale(1.05);
+}
+
+.chatbot-mic-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.chatbot-mic-listening {
+  animation: microphone-pulse 1.2s infinite;
+}
+
+.chatbot-speech-error {
+  padding: 8px 16px;
+  color: #b91c1c;
+  font-size: 13px;
+}
+
+@keyframes microphone-pulse {
+  0% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.08);
+  }
+
+  100% {
+    transform: scale(1);
+  }
+}
+.chatbot-structured-bubble {
+  max-width: 760px;
+  width: 100%;
+}
+
+.medicine-answer {
+  width: 100%;
+}
+
+.medicine-answer-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.medicine-icon {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(220, 38, 38, 0.1);
+  font-size: 20px;
+}
+
+.medicine-answer-header h3 {
+  margin: 0 0 4px;
+}
+
+.medicine-status {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.medicine-status.available {
+  color: #15803d;
+}
+
+.medicine-status.unavailable {
+  color: #b45309;
+}
+
+.medicine-summary {
+  line-height: 1.6;
+  margin: 16px 0;
+}
+
+.medicine-list h4 {
+  margin-bottom: 10px;
+}
+
+.medicine-card {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 10px;
+  background: var(--card-background);
+}
+
+.medicine-card > h4 {
+  margin: 0 0 14px;
+}
+
+.medicine-section {
+  margin-bottom: 12px;
+}
+
+.medicine-section:last-child {
+  margin-bottom: 0;
+}
+
+.medicine-section > span {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  opacity: 0.65;
+  margin-bottom: 4px;
+}
+
+.medicine-section p {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.medicine-section ul {
+  margin: 5px 0 0;
+  padding-left: 20px;
+}
+
+.medicine-section li {
+  margin-bottom: 3px;
+}
+
+.medicine-warning {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px;
+  border-radius: 10px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+.medicine-warning p {
+  margin: 4px 0 0;
+  line-height: 1.5;
+  font-size: 13px;
+}

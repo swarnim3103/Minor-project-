@@ -1,67 +1,36 @@
-const path = require("path");
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-const { embedText } = require("../embed");
-const { loadStore, search } = require("../vectorstore");
+const { chat } = require("../rag/chat");
 
-const STORE_PATH = path.join(__dirname, "..", "data", "embeddings.json");
-const TOP_K = 4;
-
-const SYSTEM_PROMPT = `You are a medical information assistant. You answer ONLY using the
-reference material provided in each message's context. Rules:
-- If the context does not contain the answer, say you don't have that information in your
-  reference material, rather than guessing or using outside knowledge.
-- Never provide a diagnosis or tell the user what condition they personally have.
-- Always remind the user to consult a licensed doctor or pharmacist for actual medical
-  decisions, diagnosis, or treatment.
-- Be clear, concise, and avoid medical jargon where possible.`;
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({
-  model: "gemini-2.0-flash",
-  systemInstruction: SYSTEM_PROMPT,
-});
-
-// Loaded lazily, cached in memory after the first request.
-let storeCache = null;
-function getStore() {
-  if (!storeCache) storeCache = loadStore(STORE_PATH);
-  return storeCache;
-}
-
-function buildPrompt(question, contextChunks) {
-  const context = contextChunks
-    .map((c, i) => `[Excerpt ${i + 1}]\n${c.text}`)
-    .join("\n\n");
-  return `Reference material:\n${context}\n\nQuestion: ${question}\n\nAnswer using only the reference material above.`;
-}
-
-// POST /api/chat  { "question": "..." }
-async function chat(req, res) {
-  const { question } = req.body || {};
-
-  if (!question || typeof question !== "string" || !question.trim()) {
-    return res.status(400).json({ error: "Field 'question' (non-empty string) is required." });
-  }
-  if (!process.env.GEMINI_API_KEY_CHATBOT) {
-    return res.status(500).json({ error: "Server is missing GEMINI_API_KEY_CHATBOT." });
-  }
-
+async function chatController(req, res) {
   try {
-    const store = getStore();
-    const queryEmbedding = await embedText(question);
-    const topChunks = search(store, queryEmbedding, TOP_K);
+    const { message, history = [] } = req.body;
 
-    const result = await model.generateContent(buildPrompt(question, topChunks));
-    const answer = result.response.text();
+    if (!message || !message.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Message is required."
+      });
+    }
 
-    res.json({
-      answer,
-      sources: topChunks.map((c) => c.source),
+    const result = await chat({
+      message,
+      history
     });
-  } catch (err) {
-    console.error("Chat controller error:", err);
-    res.status(500).json({ error: "Something went wrong answering the question." });
+
+    return res.status(200).json({
+      success: true,
+      ...result
+    });
+  } catch (error) {
+    console.error("Chat controller error:", error);
+
+    return res.status(500).json({
+      success: false,
+      message:
+        "Unable to process your request right now. Please try again."
+    });
   }
 }
 
-module.exports = { chat };
+module.exports = {
+  chatController
+};

@@ -1,312 +1,401 @@
-const axios = require("axios");
-const { GoogleGenerativeAI } = require("@google/generative-ai");
-const Groq = require("groq-sdk");
+const { resolveQuery } = require("./query");
+const { retrieveMedicines } = require("./retriever");
+const { buildMedicalPrompt } = require("./prompt");
+const { generateAnswer } = require("./gemini");
+const { generateVerification } = require("./groq");
+const { verifyAnswers } = require("./consensus");
 
-const OPENFDA_URL = "https://api.fda.gov/drug/label.json";
+const CONSENSUS_THRESHOLD = Number(
+  process.env.CONSENSUS_THRESHOLD || 0.55
+);
 
-const SYSTEM_PROMPT = `You are a medical information assistant for a healthcare app called MedCare.
-Answer the user's question directly and naturally, the way a knowledgeable assistant would.
-Formatting rules (important):
-- Keep it crisp. Do not write dense paragraphs.
-- When answering about a medicine, structure the answer as short labeled lines, each on its
-  own line, only including lines that are relevant:
-  Uses: <one short sentence>
-  Dosage: <one short sentence, only if clearly relevant>
-  Side effects: <one short sentence, common ones only>
-  Warnings: <one short sentence, most important caution only>
-- Do not use markdown symbols like **, #, or -. Just plain short lines as shown above.
-- End with a brief one-line reminder to consult a licensed doctor or pharmacist.
-- For greetings or small talk, skip the structured format and reply warmly in 1-2 sentences.
-Other rules:
-- Do not mention "reference material", "the provided text", "context", "FDA label", "openFDA",
-  or anything about where your information came from. Just answer the question.
-- If you don't have enough information to answer confidently, say so plainly, without
-  explaining why.
-- Never provide a diagnosis or tell the user what condition they personally have.
-- Avoid unnecessary medical jargon.
-- If the user shares something personal or serious (e.g. "I have cancer", "my dad was just
-  diagnosed with diabetes"), respond with genuine empathy first, do not diagnose or speculate,
-  and gently encourage them to talk to their doctor or care team. Only give general medicine
-  information if they go on to ask about a specific medicine.`;
+function isGreeting(message) {
+  const greetings = [
+    "hi",
+    "hello",
+    "hey",
+    "good morning",
+    "good afternoon",
+    "good evening"
+  ];
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY_CHATBOT);
-const model = genAI.getGenerativeModel({
-  model: "gemini-3.5-flash-lite",
-  systemInstruction: SYSTEM_PROMPT,
-});
-
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
-const GROQ_MODEL = "llama-3.3-70b-versatile";
-
-// Strips common question phrasing to guess the actual drug name being asked about.
-// Not perfect, but good enough to turn "can you tell me about metformin?" into "metformin".
-const FILLER_PATTERNS = [
-  /\bcan you\b/gi,
-  /\bcould you\b/gi,
-  /\bplease\b/gi,
-  /\btell me about\b/gi,
-  /\bwhat (is|are)\b/gi,
-  /\btell me\b/gi,
-  /\binformation (on|about)\b/gi,
-  /\binfo (on|about)\b/gi,
-  /\bside effects? of\b/gi,
-  /\buses? of\b/gi,
-  /\bdosage (of|for)\b/gi,
-  /\bexplain\b/gi,
-  /\babout\b/gi,
-  /\b(hello|hi|hey+|hii+|yo|greetings)\b/gi,
-  /[?.!,]/g,
-];
-
-const SMALL_TALK = new Set(["hello", "hi", "hey", "thanks", "thank you", "bye", "ok", "okay"]);
-
-// Words that signal a personal statement/disclosure rather than a medicine-name lookup
-// (e.g. "I have cancer", "my father has diabetes") — these should go straight to a normal,
-// empathetic reply instead of triggering an openFDA search that will just come up empty.
-const PERSONAL_STATEMENT_WORDS = new Set([
-  "i", "im", "i'm", "my", "me", "we", "us", "our",
-  "have", "having", "has", "had",
-  "am", "is", "are", "was", "were",
-  "feel", "feeling", "felt",
-  "diagnosed", "suffer", "suffering",
-  "hurts", "hurting", "sick", "ill", "pain",
-]);
-
-function extractDrugName(question) {
-  let text = question;
-  for (const pattern of FILLER_PATTERNS) {
-    text = text.replace(pattern, " ");
-  }
-  text = text.replace(/\s+/g, " ").trim();
-
-  if (!text || text.length < 3 || SMALL_TALK.has(text.toLowerCase())) {
-    return null;
-  }
-
-  const words = text.toLowerCase().split(" ");
-  const looksLikeStatement =
-    words.length > 3 || words.some((w) => PERSONAL_STATEMENT_WORDS.has(w));
-  if (looksLikeStatement) {
-    return null;
-  }
-
-  return text;
+  return greetings.includes(
+    message.trim().toLowerCase()
+  );
 }
 
-async function runOpenFDAQuery(search) {
+function parseGeminiResponse(answer) {
   try {
-    const response = await axios.get(OPENFDA_URL, {
-      params: { search, limit: 1 },
-      timeout: 8000,
-    });
-    return response.data.results?.[0] || null;
-  } catch (err) {
-    // openFDA returns 404 for genuinely no matches, but can also return
-    // 400/500 for malformed queries. Either way, treat it as "no match"
-    // rather than crashing the whole chat response.
-    console.warn(`openFDA query failed:`, err.response?.status || err.message);
-    return null;
-  }
-}
+    const cleaned = answer
+      .replace(/```json/g, "")
+      .replace(/```/g, "")
+      .trim();
 
-async function searchOpenFDA(drugName) {
-  const escaped = drugName.replace(/"/g, "");
-
-  // Attempt 1: exact match on the name as typed.
-  const exactSearch =
-    `openfda.generic_name:"${escaped}" OR ` +
-    `openfda.brand_name:"${escaped}" OR ` +
-    `openfda.substance_name:"${escaped}"`;
-  const exactMatch = await runOpenFDAQuery(exactSearch);
-  if (exactMatch) return exactMatch;
-
-  // Attempt 2: fuzzy match to tolerate typos (e.g. "metformn", "paracetmol").
-  // Lucene fuzzy (~) only works on single unquoted terms, so this works best
-  // for one-word drug names, which covers the large majority of real queries.
-  const term = escaped.replace(/\s+/g, "");
-  if (!term) return null;
-  const fuzzySearch =
-    `openfda.generic_name:${term}~2 OR ` +
-    `openfda.brand_name:${term}~2 OR ` +
-    `openfda.substance_name:${term}~2`;
-  return runOpenFDAQuery(fuzzySearch);
-}
-
-function firstOrEmpty(field) {
-  return Array.isArray(field) && field.length > 0 ? field[0] : "";
-}
-
-function buildDrugContext(label) {
-  const parts = [
-    ["Uses", firstOrEmpty(label.indications_and_usage)],
-    ["Dosage", firstOrEmpty(label.dosage_and_administration)],
-    ["Warnings", firstOrEmpty(label.warnings || label.warnings_and_cautions)],
-    ["Contraindications", firstOrEmpty(label.contraindications)],
-    ["Side effects", firstOrEmpty(label.adverse_reactions)],
-  ].filter(([, text]) => text);
-
-  return parts.map(([label, text]) => `${label}: ${text}`).join("\n\n");
-}
-
-function buildPrompt(question, context) {
-  if (!context) return question;
-  return `Background information (do not mention this to the user, just use it to answer):\n${context}\n\nUser's question: ${question}`;
-}
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-// Retries only on 503 (temporary overload). Other errors fail immediately.
-async function generateWithRetry(prompt, maxAttempts = 3) {
-  let lastErr;
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    try {
-      return await model.generateContent(prompt);
-    } catch (err) {
-      lastErr = err;
-      const is503 = err.status === 503 || /503/.test(err.message || "");
-      if (!is503 || attempt === maxAttempts) throw err;
-      const delay = 1000 * attempt;
-      console.warn(`Gemini 503, retrying in ${delay}ms (attempt ${attempt}/${maxAttempts})`);
-      await sleep(delay);
-    }
-  }
-  throw lastErr;
-}
-
-// Asks Groq (a second, independent model) the same question. Returns null on
-// any failure so a Groq outage never breaks the chat — Gemini's answer alone
-// is still a perfectly good fallback.
-async function generateGroqAnswer(prompt) {
-  if (!process.env.GROQ_API_KEY) return null;
-  try {
-    const completion = await groq.chat.completions.create({
-      model: GROQ_MODEL,
-      messages: [
-        { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: prompt },
-      ],
-      temperature: 0.3,
-      max_tokens: 500,
-    });
-    return completion.choices[0]?.message?.content || null;
-  } catch (err) {
-    console.warn("Groq call failed:", err.message);
-    return null;
-  }
-}
-
-// Simple word-overlap similarity (Jaccard index) between two answers.
-// 1.0 = identical word sets, 0.0 = nothing in common. This is the "consensus
-// check": two independent models agreeing closely is a good signal the
-// answer is grounded and not one model hallucinating.
-function jaccardSimilarity(textA, textB) {
-  const toWordSet = (text) =>
-    new Set(
-      text
-        .toLowerCase()
-        .replace(/[^\w\s]/g, "")
-        .split(/\s+/)
-        .filter(Boolean)
+    return JSON.parse(cleaned);
+  } catch (error) {
+    console.error(
+      "Failed to parse Gemini JSON:",
+      error.message
     );
-  const setA = toWordSet(textA);
-  const setB = toWordSet(textB);
-  if (setA.size === 0 || setB.size === 0) return 0;
 
-  let intersection = 0;
-  for (const word of setA) {
-    if (setB.has(word)) intersection++;
+    return {
+      title: "Medicine Information",
+      summary: answer,
+      standaloneAvailable: false,
+      medicines: [],
+      warning:
+        "Please consult a qualified doctor or pharmacist for medicine-specific advice."
+    };
   }
-  const union = new Set([...setA, ...setB]).size;
-  return intersection / union;
 }
 
-const AGREEMENT_THRESHOLD = 0.3;
+function buildVerificationPrompt({
+  question,
+  retrievedMedicines
+}) {
+  const evidence = retrievedMedicines
+    .map((result, index) => {
+      const medicine = result.medicine;
 
-// Runs both models on the same prompt and reports how well they agree.
-async function generateWithConsensus(prompt) {
-  const [geminiResult, groqAnswer] = await Promise.all([
-    generateWithRetry(prompt),
-    generateGroqAnswer(prompt),
-  ]);
-  const geminiAnswer = geminiResult.response.text();
+      return `
+MEDICINE ${index + 1}
 
-  if (!groqAnswer) {
-    // Groq unavailable/not configured — fall back to Gemini alone.
-    return { answer: geminiAnswer, confidence: "unverified", agreement: null };
+Name:
+${medicine["Medicine Name"] || "Not available"}
+
+Composition:
+${medicine["Composition"] || "Not available"}
+
+Uses:
+${medicine["Uses"] || "Not available"}
+
+Side Effects:
+${medicine["Side_effects"] || "Not available"}
+
+Manufacturer:
+${medicine["Manufacturer"] || "Not available"}
+`;
+    })
+    .join("\n-------------------------\n");
+
+  return `
+You are the independent verification model for MedCare.
+
+Your task is to independently answer the SAME medical
+question using ONLY the provided medicine evidence.
+
+USER QUESTION:
+${question}
+
+AVAILABLE MEDICINE EVIDENCE:
+
+${evidence || "No evidence available."}
+
+IMPORTANT OUTPUT FORMAT:
+
+Return ONLY valid JSON.
+
+Do NOT use Markdown.
+Do NOT use a code block.
+Do NOT add text outside the JSON.
+
+Use EXACTLY this structure:
+
+{
+  "title": "Medicine name or topic",
+  "summary": "Short summary of the available information",
+  "standaloneAvailable": false,
+  "medicines": [
+    {
+      "name": "Medicine name",
+      "composition": "Composition",
+      "uses": "Uses",
+      "sideEffects": [
+        "Side effect 1",
+        "Side effect 2"
+      ]
+    }
+  ],
+  "warning": "Medical safety message"
+}
+
+RULES:
+
+1. Use only the provided medicine evidence.
+
+2. Do not invent medical information.
+
+3. Do not blindly agree with another model.
+
+4. Do not diagnose diseases or medical conditions.
+
+5. Do not prescribe medicines.
+
+6. Do not recommend changing, increasing,
+   decreasing, or stopping dosage.
+
+7. Do not add unsupported information about
+   drug interactions, pregnancy, contraindications,
+   or dosage.
+
+8. If the requested medicine does not have a
+   standalone entry, set standaloneAvailable to false.
+
+9. If combination medicines contain the requested
+   medicine, list those medicines separately.
+
+10. Keep the response concise and factual.
+
+11. If information is unavailable, clearly say so.
+
+Return ONLY the JSON object.
+`;
+}
+
+async function chat({
+  message,
+  history = []
+}) {
+  if (!message || !message.trim()) {
+    throw new Error("Message is required.");
   }
 
-  const agreement = jaccardSimilarity(geminiAnswer, groqAnswer);
-  const confidence = agreement >= AGREEMENT_THRESHOLD ? "high" : "low";
+  const userMessage = message.trim();
 
-  console.log(
-    `Consensus check: agreement=${agreement.toFixed(2)} confidence=${confidence}`
+  // --------------------------------------------------
+  // STEP 1: GREETING
+  // --------------------------------------------------
+
+  if (isGreeting(userMessage)) {
+    return {
+      answer: {
+        title: "MedCare",
+        summary:
+          "Hello! I can help you understand information about medicines, including their uses and commonly reported side effects.",
+        standaloneAvailable: false,
+        medicines: [],
+        warning:
+          "This information is educational and should not replace professional medical advice."
+      },
+
+      sources: [],
+
+      verified: true,
+
+      similarity: 1,
+
+      retrievedQuestion: userMessage
+    };
+  }
+
+  // --------------------------------------------------
+  // STEP 2: RESOLVE CONVERSATIONAL CONTEXT
+  // --------------------------------------------------
+
+  const resolvedQuestion = await resolveQuery(
+    userMessage,
+    history
   );
 
-  // Gemini's answer is used as the primary response either way (it's the one
-  // grounded in the openFDA context via buildPrompt); Groq serves as the
-  // independent check. Only the confidence/agreement info differs.
-  return { answer: geminiAnswer, confidence, agreement };
-}
+  console.log(
+    "Resolved question:",
+    resolvedQuestion
+  );
 
-// POST /api/chat  { "message": "..." }
-async function chat(req, res) {
-  const { message: question } = req.body || {};
+  // --------------------------------------------------
+  // STEP 3: RETRIEVE MEDICINES
+  // --------------------------------------------------
 
-  if (!question || typeof question !== "string" || !question.trim()) {
-    return res.status(400).json({ error: "Field 'message' (non-empty string) is required." });
+  const retrievedMedicines = retrieveMedicines(
+    resolvedQuestion,
+    5
+  );
+
+  console.log("Retrieved medicines:");
+
+  retrievedMedicines.forEach(
+    ({ medicine, score }, index) => {
+      console.log(
+        `${index + 1}. ${
+          medicine["Medicine Name"]
+        } - ${score.toFixed(3)}`
+      );
+    }
+  );
+
+  // --------------------------------------------------
+  // STEP 4: NO RELEVANT MEDICINE FOUND
+  // --------------------------------------------------
+
+  if (!retrievedMedicines.length) {
+    return {
+      answer: {
+        title: "Medicine Information",
+
+        summary:
+          "I could not find enough relevant medicine information in the available database to answer this question reliably.",
+
+        standaloneAvailable: false,
+
+        medicines: [],
+
+        warning:
+          "Please consult a qualified doctor or pharmacist."
+      },
+
+      sources: [],
+
+      verified: false,
+
+      similarity: 0,
+
+      retrievedQuestion: resolvedQuestion
+    };
   }
-  if (!process.env.GEMINI_API_KEY_CHATBOT) {
-    return res.status(500).json({ error: "Server is missing GEMINI_API_KEY_CHATBOT." });
+
+  // --------------------------------------------------
+  // STEP 5: BUILD GROUNDED GEMINI PROMPT
+  // --------------------------------------------------
+
+  const prompt = buildMedicalPrompt({
+    question: resolvedQuestion,
+    retrievedMedicines,
+    conversationHistory: history
+  });
+
+  // --------------------------------------------------
+  // STEP 6: GEMINI PRIMARY ANSWER
+  // --------------------------------------------------
+
+  const geminiRawAnswer =
+    await generateAnswer(prompt);
+
+  if (!geminiRawAnswer) {
+    throw new Error(
+      "Gemini returned an empty answer."
+    );
   }
+
+  console.log(
+    "Gemini answer generated."
+  );
+
+  // Convert Gemini JSON string into JavaScript object
+  const geminiData =
+    parseGeminiResponse(geminiRawAnswer);
+
+  // --------------------------------------------------
+  // STEP 7: GROQ INDEPENDENT VERIFICATION
+  // --------------------------------------------------
+
+  const verificationPrompt =
+    buildVerificationPrompt({
+      question: resolvedQuestion,
+      retrievedMedicines
+    });
+
+  let groqData = null;
 
   try {
-    const drugName = extractDrugName(question);
-    let label = null;
-
-    if (drugName) {
-      label = await searchOpenFDA(drugName);
-    }
-
-    let answer;
-    let sources = [];
-
-    if (drugName && !label) {
-      answer =
-        "I don't have information on that. Please consult a licensed doctor or pharmacist for advice.";
-    } else {
-      const context = label ? buildDrugContext(label) : "";
-      const { answer: finalAnswer, confidence, agreement } = await generateWithConsensus(
-        buildPrompt(question, context)
+    const groqRawAnswer =
+      await generateVerification(
+        verificationPrompt
       );
-      answer = finalAnswer;
 
-      if (label) {
-        const name = drugName.charAt(0).toUpperCase() + drugName.slice(1);
-        sources = [
-          {
-            medicine: name,
-            topic: "Drug label information",
-            source: "openFDA",
-            source_url: `https://labels.fda.gov/`,
-            similarity: 1,
-          },
-        ];
-      }
+    if (groqRawAnswer) {
+      console.log(
+        "Groq verification answer generated."
+      );
 
-      return res.json({ answer, sources, confidence, agreement });
+      groqData =
+        parseGeminiResponse(groqRawAnswer);
     }
-
-    res.json({ answer, sources });
-  } catch (err) {
-    console.error("Chat error:", err);
-    const is503 = err.status === 503 || /503/.test(err.message || "");
-    const message = is503
-      ? "The AI service is busy right now. Please try again in a moment."
-      : "Something went wrong answering the question.";
-    res.status(is503 ? 503 : 500).json({ error: message });
+  } catch (error) {
+    console.error(
+      "Groq verification failed:",
+      error.message
+    );
   }
+
+  // --------------------------------------------------
+  // STEP 8: JACCARD CONSENSUS
+  // --------------------------------------------------
+
+  let verified = false;
+  let similarity = 0;
+
+  if (groqData) {
+    const verification =
+      verifyAnswers(
+        JSON.stringify(geminiData),
+        JSON.stringify(groqData),
+        CONSENSUS_THRESHOLD
+      );
+
+    verified = verification.verified;
+    similarity = verification.similarity;
+
+    console.log(
+      `Gemini/Groq similarity: ${similarity.toFixed(
+        3
+      )}`
+    );
+  }
+
+  // --------------------------------------------------
+  // STEP 9: RETURN GEMINI ANSWER
+  // --------------------------------------------------
+  //
+  // TEMPORARY BEHAVIOUR:
+  // We calculate Jaccard similarity but do not
+  // block the Gemini answer when similarity is low.
+  //
+  // Gemini remains the PRIMARY model.
+  // --------------------------------------------------
+
+  return {
+    answer: geminiData,
+
+    sources: buildSources(
+      retrievedMedicines
+    ),
+
+    verified,
+
+    similarity,
+
+    retrievedQuestion: resolvedQuestion
+  };
 }
 
-module.exports = { chat };
+// --------------------------------------------------
+// BUILD FRONTEND SOURCES
+// --------------------------------------------------
+
+function buildSources(
+  retrievedMedicines
+) {
+  return retrievedMedicines.map(
+    ({ medicine, score }) => ({
+      medicine:
+        medicine["Medicine Name"] ||
+        "Unknown medicine",
+
+      topic:
+        "Medicine Information",
+
+      source:
+        "MedCare Medicine Dataset",
+
+      source_url:
+        "",
+
+      similarity:
+        Number(score.toFixed(3))
+    })
+  );
+}
+
+module.exports = {
+  chat
+};
