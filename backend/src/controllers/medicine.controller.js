@@ -300,32 +300,43 @@ async function deleteMedicine(req, res) {
 }
 
 // Search medicine catalogue for autocomplete
+
 const searchMedicineCatalogue = async (req, res) => {
   try {
     const query = req.query.q?.trim();
 
-    // Don't search for empty or very short queries
     if (!query || query.length < 2) {
       return res.json([]);
     }
 
+    const searchTerm = `%${query}%`;
+
     const [rows] = await db.execute(
-      `SELECT id, name
-       FROM medicine_catalogue
-       WHERE name LIKE CONCAT(?, '%')
+      `SELECT
+         id,
+         source_id,
+         name,
+         short_composition1,
+         short_composition2
+       FROM medicine_catalogue_v2
+       WHERE name LIKE ?
+          OR short_composition1 LIKE ?
+          OR short_composition2 LIKE ?
        ORDER BY name ASC
        LIMIT 10`,
-      [query]
+      [searchTerm, searchTerm, searchTerm]
     );
 
     return res.json(rows);
   } catch (error) {
     console.error("Medicine catalogue search error:", error);
+
     return res.status(500).json({
-      message: "Failed to search medicine catalogue",
+      message: "Failed to search medicines",
     });
   }
 };
+
 
 
 module.exports = {

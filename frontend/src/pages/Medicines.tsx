@@ -372,8 +372,19 @@ function Medicines() {
                             setShowSuggestions(false);
                           }}
                         >
-                          {suggestion.name}
-                        </button>
+  <span className="medicine-suggestion-name">
+    {suggestion.name}
+  </span>
+
+  {(suggestion.short_composition1 ||
+    suggestion.short_composition2) && (
+    <span className="medicine-suggestion-composition">
+      {[suggestion.short_composition1, suggestion.short_composition2]
+        .filter(Boolean)
+        .join(" + ")}
+    </span>
+  )}
+</button>
                       ))}
 
                     {!searchLoading &&

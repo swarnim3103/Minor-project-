@@ -281,10 +281,15 @@ export async function addMedicine(
   return data;
 }
 
+
 export interface MedicineSuggestion {
   id: number;
+  source_id: number;
   name: string;
+  short_composition1: string | null;
+  short_composition2: string | null;
 }
+
 
 export const searchMedicineCatalogue = async (
   query: string
