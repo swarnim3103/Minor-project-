@@ -362,15 +362,24 @@ function Medicines() {
                           type="button"
                           className="medicine-suggestion"
                           onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => {
-                            setForm({
-                              ...form,
-                              name: suggestion.name,
-                            });
+                         
+onClick={() => {
+  const strengthMatch = suggestion.name.match(
+    /\b\d+(?:,\d{3})*(?:\.\d+)?\s*(?:mg|mcg|μg|µg|g|kg|ml|mL|IU|units?)\b/i
+  );
 
-                            setSuggestions([]);
-                            setShowSuggestions(false);
-                          }}
+  setForm((prev) => ({
+    ...prev,
+    name: suggestion.name,
+    dosage: strengthMatch
+      ? strengthMatch[0].replace(/\s+/g, " ").trim()
+      : "",
+  }));
+
+  setSuggestions([]);
+  setShowSuggestions(false);
+}}
+
                         >
   <span className="medicine-suggestion-name">
     {suggestion.name}
