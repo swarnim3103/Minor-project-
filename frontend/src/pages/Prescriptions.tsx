@@ -2,6 +2,8 @@ import { useState, useEffect, type ChangeEvent } from "react";
 import Modal from "../components/Modal";
 import ScanCapture from "../components/ScanCapture";
 import { PlusIcon, FileIcon, UploadIcon } from "../components/icons";
+import SummaryView, { summaryPreview } from "../components/SummaryView";
+import { convertImageFileToPdf } from "../utils/imageToPdf";
 import "../styles/shared.css";
 import "./Prescriptions.css";
 import {
@@ -65,9 +67,32 @@ function Prescriptions() {
     }
   }
 
-  function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
-    setFile(e.target.files?.[0] ?? null);
+  async function handleFileChange(e: ChangeEvent<HTMLInputElement>) {
+  const selected = e.target.files?.[0];
+  if (!selected) {
+    setFile(null);
+    return;
   }
+
+  if (selected.type === "application/pdf") {
+    setFile(selected);
+    return;
+  }
+
+  if (selected.type.startsWith("image/")) {
+    try {
+      setError("");
+      const converted = await convertImageFileToPdf(selected);
+      setFile(converted);
+    } catch (err) {
+      console.error("Image to PDF conversion failed:", err);
+      setError("Could not convert the image to PDF. Please try a different file.");
+    }
+    return;
+  }
+
+  setError("Please choose a PDF or an image file (JPG, PNG).");
+}
 
   function handleScanCapture(scannedFile: File) {
     setFile(scannedFile);
@@ -181,11 +206,11 @@ function Prescriptions() {
                 </button>
               </div>
 
-              {p.ai_summary_status === "completed" && p.ai_summary && (
-                <p style={{ fontSize: 13, color: "var(--color-text-muted)", marginTop: 10 }}>
-                  {truncate(p.ai_summary, 100)}
-                </p>
-              )}
+              {summaryPreview(p) && (
+  <p style={{ fontSize: 13, color: "var(--color-text-muted)", marginTop: 10 }}>
+    {summaryPreview(p)}
+  </p>
+)}
               {p.ai_summary_status === "failed" && (
                 <p style={{ fontSize: 12.5, color: "var(--color-text-muted)", marginTop: 10, fontStyle: "italic" }}>
                   Summary unavailable
@@ -253,19 +278,19 @@ function Prescriptions() {
               </div>
 
               <div className="form-field">
-                <label htmlFor="rx-file">File (PDF only)</label>
-                <label className="prescription-upload-box" htmlFor="rx-file">
-                  <UploadIcon width={20} height={20} />
-                  <span>{file?.name || "Click to choose a PDF file"}</span>
-                </label>
-                <input
-                  id="rx-file"
-                  type="file"
-                  accept="application/pdf"
-                  onChange={handleFileChange}
-                  style={{ display: "none" }}
-                />
-              </div>
+  <label htmlFor="rx-file">File (PDF or image — images convert to PDF automatically)</label>
+  <label className="prescription-upload-box" htmlFor="rx-file">
+    <UploadIcon width={20} height={20} />
+    <span>{file?.name || "Click to choose a PDF or image file"}</span>
+  </label>
+  <input
+    id="rx-file"
+    type="file"
+    accept="application/pdf,image/jpeg,image/png"
+    onChange={handleFileChange}
+    style={{ display: "none" }}
+  />
+</div>
 
               <div style={{ display: "flex", justifyContent: "flex-end", gap: 10, marginTop: 8 }}>
                 <button className="btn btn-secondary" onClick={() => setUploadMode("choose")} disabled={uploading}>
@@ -287,14 +312,9 @@ function Prescriptions() {
             {typeLabels[selectedPrescription.prescription_type]}
           </p>
 
-          <h4 style={{ marginBottom: 6 }}>Summary</h4>
-          {selectedPrescription.ai_summary_status === "completed" && selectedPrescription.ai_summary ? (
-            <p style={{ marginBottom: 16 }}>{selectedPrescription.ai_summary}</p>
-          ) : (
-            <p style={{ marginBottom: 16, fontStyle: "italic", color: "var(--color-text-muted)" }}>
-              A summary could not be generated for this prescription.
-            </p>
-          )}
+          <div style={{ marginBottom: 16 }}>
+  <SummaryView prescription={selectedPrescription} />
+</div>
 
           <a
             href={`http://localhost:5000${selectedPrescription.file_url}`}
