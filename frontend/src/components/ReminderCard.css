@@ -73,3 +73,50 @@
 .reminder-toggle-on .reminder-toggle-knob {
   transform: translateX(18px);
 }
+
+
+
+.reminder-card-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.reminder-action-button {
+  padding: 7px 11px;
+  border: 1px solid #d1d5db;
+  border-radius: 7px;
+  background: white;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.reminder-edit-button {
+  color: #2563eb;
+}
+
+.reminder-edit-button:hover {
+  background: #eff6ff;
+}
+
+.reminder-delete-button {
+  color: #dc2626;
+}
+
+.reminder-delete-button:hover {
+  background: #fef2f2;
+}
+
+@media (max-width: 480px) {
+  .reminder-card-actions {
+    gap: 6px;
+  }
+
+  .reminder-action-button {
+    padding: 6px 8px;
+  }
+}
