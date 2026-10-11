@@ -2,8 +2,9 @@ import { useState, useEffect, type ChangeEvent } from "react";
 import Modal from "../components/Modal";
 import ScanCapture from "../components/ScanCapture";
 import { PlusIcon, FileIcon, UploadIcon } from "../components/icons";
-import SummaryView, { summaryPreview } from "../components/SummaryView";
 import { convertImageFileToPdf } from "../utils/imageToPdf";
+import SummaryView, { summaryPreview, parseSummary } from "../components/SummaryView";
+import AddToMedicinesModal from "../components/AddToMedicinesModal";
 import "../styles/shared.css";
 import "./Prescriptions.css";
 import {
@@ -19,6 +20,12 @@ const typeLabels: Record<string, string> = {
   handwritten_scanned: "Scanned (Handwritten)",
 };
 
+function canAddToMedicines(p: Prescription) {
+  if (p.ai_summary_status !== "completed") return false;
+  const parsed = parseSummary(p.ai_summary);
+  return !!parsed && !parsed.unclear && parsed.medications.length > 0;
+}
+
 function formatDate(dateStr: string) {
   const d = new Date(dateStr);
   return d.toLocaleDateString("en-IN", {
@@ -26,10 +33,6 @@ function formatDate(dateStr: string) {
     month: "short",
     day: "numeric",
   });
-}
-
-function truncate(text: string, max: number) {
-  return text.length > max ? text.slice(0, max).trim() + "…" : text;
 }
 
 type UploadMode = "choose" | "file" | "scan";
@@ -48,7 +51,8 @@ function Prescriptions() {
   const [uploading, setUploading] = useState(false);
 
   const [selectedPrescription, setSelectedPrescription] = useState<Prescription | null>(null);
-
+  const [addingFrom, setAddingFrom] = useState<Prescription | null>(null);
+  const [notice, setNotice] = useState("");
   useEffect(() => {
     loadPrescriptions();
   }, []);
@@ -167,6 +171,20 @@ function Prescriptions() {
       </div>
 
       {error && <div className="error-banner">{error}</div>}
+      {notice && (
+  <div
+    style={{
+      background: "#e8f6ec",
+      color: "#1e7a3c",
+      padding: "10px 14px",
+      borderRadius: 8,
+      marginBottom: 12,
+      fontSize: 14,
+    }}
+  >
+    {notice}
+  </div>
+)}
 
       {loading ? (
         <p>Loading prescriptions...</p>
@@ -313,19 +331,44 @@ function Prescriptions() {
           </p>
 
           <div style={{ marginBottom: 16 }}>
-  <SummaryView prescription={selectedPrescription} />
-</div>
+            <SummaryView prescription={selectedPrescription} />
+          </div>
 
-          <a
-            href={`http://localhost:5000${selectedPrescription.file_url}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="btn btn-primary"
-            style={{ display: "inline-flex" }}
-          >
-            View Prescription
-          </a>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <a
+              href={`http://localhost:5000${selectedPrescription.file_url}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn btn-secondary"
+              style={{ display: "inline-flex" }}
+            >
+              View Prescription
+            </a>
+
+            {canAddToMedicines(selectedPrescription) && (
+              <button
+                className="btn btn-primary"
+                onClick={() => {
+                  setAddingFrom(selectedPrescription);
+                  setSelectedPrescription(null);
+                }}
+              >
+                Add to Medicines
+              </button>
+            )}
+          </div>
         </Modal>
+      )}
+      {addingFrom && (
+        <AddToMedicinesModal
+          prescription={addingFrom}
+          onClose={() => setAddingFrom(null)}
+          onAdded={(count) =>
+            setNotice(
+              `${count} medicine${count === 1 ? "" : "s"} added to your Medicines section.`
+            )
+          }
+        />
       )}
     </div>
   );
