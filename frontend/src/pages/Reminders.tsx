@@ -80,6 +80,14 @@ function Reminders() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
+  const medicineIdsWithReminders = new Set(
+  reminders.map((reminder) => reminder.medicine_id)
+);
+
+const availableMedicines = medicines.filter(
+  (medicine) => !medicineIdsWithReminders.has(medicine.id)
+);
+
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -110,15 +118,15 @@ function Reminders() {
         : data.reminders || [];
 
       const mapped: Reminder[] = reminderList.map(
-        (r: any) => ({
-          id: r.id,
-          medicine_name: r.medicine_name,
-          reminder_time:
-            r.reminder_time?.slice(0, 5),
-          status: r.status,
-          dosage: r.dosage || "",
-        })
-      );
+  (r: any) => ({
+    id: r.id,
+    medicine_id: r.medicine_id,
+    medicine_name: r.medicine_name,
+    reminder_time: r.reminder_time?.slice(0, 5),
+    status: r.status,
+    dosage: r.dosage || "",
+  })
+);
 
       setReminders(mapped);
       setError(null);
@@ -415,37 +423,32 @@ function Reminders() {
   // =========================
 
   function openAddReminder() {
-    if (medicines.length === 0) {
-      setError(
-        "Please add a medicine before creating a reminder."
-      );
-      return;
-    }
+  setError(null);
 
-    const firstMedicine = medicines[0];
-
-    setMedicineId(firstMedicine.id);
-
-    setStartDate(
-      firstMedicine.start_date
-    );
-
-    setEndDate(
-      firstMedicine.end_date ?? ""
-    );
-
-    setReminderTimes(
-      Array(
-        getRequiredTimeCount(
-          firstMedicine.frequency
-        )
-      ).fill("08:00")
-    );
-
-    setError(null);
-
-    setIsModalOpen(true);
+  if (medicines.length === 0) {
+    setError("Please add a medicine before creating a reminder.");
+    return;
   }
+
+  if (availableMedicines.length === 0) {
+    setError(
+      "All your medicines already have reminders. Delete an existing reminder set before creating another."
+    );
+    return;
+  }
+
+  const firstMedicine = availableMedicines[0];
+
+  setMedicineId(firstMedicine.id);
+  setStartDate(firstMedicine.start_date);
+  setEndDate(firstMedicine.end_date ?? "");
+
+  setReminderTimes(
+    Array(getRequiredTimeCount(firstMedicine.frequency)).fill("08:00")
+  );
+
+  setIsModalOpen(true);
+}
 
   const sorted = [...reminders].sort(
     (a, b) =>
@@ -485,11 +488,11 @@ function Reminders() {
         </button>
       </div>
 
-      {error && (
-        <div className="error-banner">
-          {error}
-        </div>
-      )}
+      {error && !isModalOpen && (
+  <div className="error-banner" role="alert">
+    {error}
+  </div>
+)}
 
       {loading ? (
         <p>Loading reminders...</p>
@@ -530,6 +533,11 @@ function Reminders() {
             id="reminder-form"
             onSubmit={handleSubmit}
           >
+            {error && (
+    <div className="error-banner modal-error" role="alert">
+      {error}
+    </div>
+  )}
 
             {/* MEDICINE */}
 
@@ -549,19 +557,21 @@ function Reminders() {
                   )
                 }
               >
-                {medicines.map(
-                  (medicine) => (
-                    <option
-                      key={medicine.id}
-                      value={medicine.id}
-                    >
-                      {medicine.name}
-                      {medicine.dosage
-                        ? ` - ${medicine.dosage}`
-                        : ""}
-                    </option>
-                  )
-                )}
+                {medicines.map((medicine) => {
+  const alreadyHasReminder = medicineIdsWithReminders.has(medicine.id);
+
+  return (
+    <option
+      key={medicine.id}
+      value={medicine.id}
+      disabled={alreadyHasReminder}
+    >
+      {medicine.name}
+      {medicine.dosage ? ` - ${medicine.dosage}` : ""}
+      {alreadyHasReminder ? " (Reminder already set)" : ""}
+    </option>
+  );
+})}
               </select>
             </div>
 

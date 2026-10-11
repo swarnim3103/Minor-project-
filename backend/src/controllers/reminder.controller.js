@@ -32,26 +32,24 @@ function getReminderFrequency(medicineFrequency) {
 // Saturday = 6
 // =========================================================
 
-function getDayOfWeek(dateString) {
-  const date = new Date(`${dateString}T00:00:00Z`);
 
-  // Convert JavaScript's 0-6 format
-  // to MySQL's 1-7 format:
-  //
-  // JavaScript:
-  // Sunday = 0
-  // Monday = 1
-  // ...
-  // Saturday = 6
-  //
-  // MySQL:
-  // Sunday = 1
-  // Monday = 2
-  // ...
-  // Saturday = 7
 
-  return date.getUTCDay() + 1;
+
+function getDayOfWeek(dateValue) {
+  const date =
+    dateValue instanceof Date
+      ? dateValue
+      : new Date(dateValue);
+
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`Invalid start date: ${dateValue}`);
+  }
+
+  // Convert Sunday = 0 to MySQL's Sunday = 1 convention.
+  return date.getDay() + 1;
 }
+
+
 
 // =========================================================
 // CREATE REMINDER
@@ -133,6 +131,20 @@ async function createReminder(req, res) {
 
     const medicine = medicineRows[0];
 
+    // Prevent creating another reminder set for this medicine
+const [existingReminders] = await pool.query(
+  `SELECT COUNT(*) AS total
+   FROM reminders
+   WHERE user_id = ? AND medicine_id = ?`,
+  [userId, medicine_id]
+);
+
+if (Number(existingReminders[0].total) > 0) {
+  return res.status(409).json({
+    error: "Reminders already exist for this medicine. Please edit or delete the existing reminders first.",
+  });
+}
+
     // -----------------------------------------
     // Convert medicine frequency
     // -----------------------------------------
@@ -194,16 +206,33 @@ async function createReminder(req, res) {
     // medicine start date
     // -----------------------------------------
 
-    const dayOfWeek =
-      reminderFrequency === "weekly"
-        ? getDayOfWeek(startDate)
-        : null;
+    
+const dayOfWeek =
+  reminderFrequency === "weekly"
+    ? getDayOfWeek(startDate)
+    : null;
 
-    // -----------------------------------------
-    // Start transaction
-    // -----------------------------------------
+console.log("[Weekly Debug]", {
+  startDate,
+  startDateType: typeof startDate,
+  dayOfWeek,
+});
 
-    const connection = await pool.getConnection();
+// Validate the weekly reminder day before connecting to the database.
+if (
+  reminderFrequency === "weekly" &&
+  (!Number.isInteger(dayOfWeek) ||
+    dayOfWeek < 1 ||
+    dayOfWeek > 7)
+) {
+  return res.status(400).json({
+    error:
+      "Could not determine the weekly reminder day from the medicine start date",
+  });
+}
+
+const connection = await pool.getConnection();
+
 
     try {
       await connection.beginTransaction();

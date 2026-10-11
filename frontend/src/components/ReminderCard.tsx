@@ -3,6 +3,7 @@ import "./ReminderCard.css";
 
 export interface Reminder {
   id: number;
+  medicine_id: number;
   medicine_name: string;
   reminder_time: string; // "08:00"
   status: "active" | "inactive";
