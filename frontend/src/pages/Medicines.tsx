@@ -1,3 +1,4 @@
+
 import { useEffect, useState, type FormEvent } from "react";
 import MedicineCard, { type Medicine } from "../components/MedicineCard";
 import Modal from "../components/Modal";
@@ -12,6 +13,8 @@ import {
   type MedicineSuggestion,
 } from "../services/authService";
 
+const API_BASE = "http://localhost:5000/api";
+
 const FREQUENCIES = [
   "Once daily",
   "Twice daily",
@@ -19,6 +22,21 @@ const FREQUENCIES = [
   "Four times daily",
   "Weekly",
 ];
+
+const REQUIRED_REMINDERS: Record<string, number> = {
+  "Once daily": 1,
+  "Twice daily": 2,
+  "Three times daily": 3,
+  "Four times daily": 4,
+  Weekly: 1,
+};
+
+interface ReminderStatusRecord {
+  id: number;
+  medicine_id: number;
+  reminder_time: string;
+  status: string;
+}
 
 const emptyForm = {
   name: "",
@@ -31,7 +49,6 @@ const emptyForm = {
 
 const getTodayDate = () => {
   const now = new Date();
-
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, "0");
   const day = String(now.getDate()).padStart(2, "0");
@@ -48,24 +65,27 @@ function Medicines() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
-  // Autocomplete state
-  const [suggestions, setSuggestions] = useState<
-    MedicineSuggestion[]
-  >([]);
+  // Medicine autocomplete state
+  const [suggestions, setSuggestions] = useState<MedicineSuggestion[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
 
-  // Load the user's medicines
+  // Reminder status state
+  const [remindersForStatus, setRemindersForStatus] = useState<
+    ReminderStatusRecord[]
+  >([]);
+  const [remindersLoaded, setRemindersLoaded] = useState(false);
+
+  // Load medicines and reminders when the page opens
   useEffect(() => {
     loadMedicines();
+    loadReminderStatuses();
   }, []);
 
   // Search the medicine catalogue as the user types
   useEffect(() => {
     const query = form.name.trim();
 
-    // Don't search when the modal is closed
-    // or fewer than 2 characters have been entered
     if (!isModalOpen || query.length < 2) {
       setSuggestions([]);
       setShowSuggestions(false);
@@ -98,7 +118,6 @@ function Medicines() {
       }
     }, 250);
 
-    // Cancel outdated searches
     return () => {
       cancelled = true;
       clearTimeout(timer);
@@ -119,6 +138,76 @@ function Medicines() {
     } finally {
       setLoading(false);
     }
+  }
+
+  async function loadReminderStatuses() {
+    try {
+      setRemindersLoaded(false);
+
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(`${API_BASE}/reminders`, {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to load reminders");
+      }
+
+      const data = await res.json();
+
+      const reminderList: ReminderStatusRecord[] = Array.isArray(data)
+        ? data
+        : data.reminders || [];
+
+      setRemindersForStatus(reminderList);
+      setRemindersLoaded(true);
+    } catch (err) {
+      console.error("Failed to load reminder statuses:", err);
+      setRemindersLoaded(false);
+    }
+  }
+
+  function getReminderStatus(
+    medicine: Medicine
+  ): "missing" | "incomplete" | null {
+    // Do not display a warning until reminder data has loaded.
+    if (!remindersLoaded) {
+      return null;
+    }
+
+    const requiredCount = REQUIRED_REMINDERS[medicine.frequency];
+
+    if (requiredCount === undefined) {
+      return null;
+    }
+
+    const activeReminders = remindersForStatus.filter(
+      (reminder) =>
+        Number(reminder.medicine_id) === Number(medicine.id) &&
+        reminder.status === "active"
+    );
+
+    const uniqueTimes = new Set(
+      activeReminders.map((reminder) =>
+        String(reminder.reminder_time || "").slice(0, 5)
+      )
+    );
+
+    const activeCount = uniqueTimes.size;
+
+    if (activeCount === 0) {
+      return "missing";
+    }
+
+    if (activeCount < requiredCount) {
+      return "incomplete";
+    }
+
+    return null;
   }
 
   function openAddModal() {
@@ -169,9 +258,10 @@ function Medicines() {
     try {
       await deleteMedicine(id);
 
-      setMedicines((prev) =>
-        prev.filter((m) => m.id !== id)
-      );
+      setMedicines((prev) => prev.filter((m) => m.id !== id));
+
+      // Refresh reminder data after deleting the medicine.
+      await loadReminderStatuses();
 
       setError("");
     } catch (err) {
@@ -248,13 +338,15 @@ function Medicines() {
       setForm(emptyForm);
       setSuggestions([]);
       setShowSuggestions(false);
+
+      // Reload medicines and reminder data to keep the cards up to date.
+      await loadMedicines();
+      await loadReminderStatuses();
     } catch (err) {
       console.error("Medicine save error:", err);
 
       setError(
-        err instanceof Error
-          ? err.message
-          : "Failed to save medicine."
+        err instanceof Error ? err.message : "Failed to save medicine."
       );
     } finally {
       setSubmitting(false);
@@ -269,10 +361,7 @@ function Medicines() {
           <p>Add and track every medicine in your regimen.</p>
         </div>
 
-        <button
-          className="btn btn-primary"
-          onClick={openAddModal}
-        >
+        <button className="btn btn-primary" onClick={openAddModal}>
           <PlusIcon width={16} height={16} />
           Add Medicine
         </button>
@@ -285,12 +374,8 @@ function Medicines() {
       ) : medicines.length === 0 ? (
         <div className="empty-state">
           <PillIcon width={32} height={32} />
-
           <h3>No medicines yet</h3>
-
-          <p>
-            Add your first medicine to start getting reminders.
-          </p>
+          <p>Add your first medicine to start getting reminders.</p>
         </div>
       ) : (
         <div className="card-grid">
@@ -300,6 +385,7 @@ function Medicines() {
               medicine={medicine}
               onEdit={openEditModal}
               onDelete={handleDelete}
+              reminderStatus={getReminderStatus(medicine)}
             />
           ))}
         </div>
@@ -326,7 +412,6 @@ function Medicines() {
                     ...form,
                     name: e.target.value,
                   });
-
                   setShowSuggestions(true);
                 }}
                 onFocus={() => {
@@ -335,7 +420,7 @@ function Medicines() {
                   }
                 }}
                 onBlur={() => {
-                  // Allow a suggestion click before closing
+                  // Allow a suggestion click before closing.
                   setTimeout(() => {
                     setShowSuggestions(false);
                   }, 150);
@@ -345,73 +430,70 @@ function Medicines() {
                 required
               />
 
-              {showSuggestions &&
-                form.name.trim().length >= 2 && (
-                  <div className="medicine-suggestions">
-                    {searchLoading && (
-                      <div className="medicine-suggestion-message">
-                        Searching...
-                      </div>
-                    )}
+              {showSuggestions && form.name.trim().length >= 2 && (
+                <div className="medicine-suggestions">
+                  {searchLoading && (
+                    <div className="medicine-suggestion-message">
+                      Searching...
+                    </div>
+                  )}
 
-                    {!searchLoading &&
-                      suggestions.length > 0 &&
-                      suggestions.map((suggestion) => (
-                        <button
-                          key={suggestion.id}
-                          type="button"
-                          className="medicine-suggestion"
-                          onMouseDown={(e) => e.preventDefault()}
-                         
-onClick={() => {
-  const strengthMatch = suggestion.name.match(
-    /\b\d+(?:,\d{3})*(?:\.\d+)?\s*(?:mg|mcg|μg|µg|g|kg|ml|mL|IU|units?)\b/i
-  );
+                  {!searchLoading &&
+                    suggestions.length > 0 &&
+                    suggestions.map((suggestion) => (
+                      <button
+                        key={suggestion.id}
+                        type="button"
+                        className="medicine-suggestion"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => {
+                          const strengthMatch = suggestion.name.match(
+                            /\b\d+(?:,\d{3})*(?:\.\d+)?\s*(?:mg|mcg|μg|µg|g|kg|ml|mL|IU|units?)\b/i
+                          );
 
-  setForm((prev) => ({
-    ...prev,
-    name: suggestion.name,
-    dosage: strengthMatch
-      ? strengthMatch[0].replace(/\s+/g, " ").trim()
-      : "",
-  }));
+                          setForm((prev) => ({
+                            ...prev,
+                            name: suggestion.name,
+                            dosage: strengthMatch
+                              ? strengthMatch[0].replace(/\s+/g, " ").trim()
+                              : "",
+                          }));
 
-  setSuggestions([]);
-  setShowSuggestions(false);
-}}
+                          setSuggestions([]);
+                          setShowSuggestions(false);
+                        }}
+                      >
+                        <span className="medicine-suggestion-name">
+                          {suggestion.name}
+                        </span>
 
-                        >
-  <span className="medicine-suggestion-name">
-    {suggestion.name}
-  </span>
+                        {(suggestion.short_composition1 ||
+                          suggestion.short_composition2) && (
+                          <span className="medicine-suggestion-composition">
+                            {[
+                              suggestion.short_composition1,
+                              suggestion.short_composition2,
+                            ]
+                              .filter(Boolean)
+                              .join(" + ")}
+                          </span>
+                        )}
+                      </button>
+                    ))}
 
-  {(suggestion.short_composition1 ||
-    suggestion.short_composition2) && (
-    <span className="medicine-suggestion-composition">
-      {[suggestion.short_composition1, suggestion.short_composition2]
-        .filter(Boolean)
-        .join(" + ")}
-    </span>
-  )}
-</button>
-                      ))}
-
-                    {!searchLoading &&
-                      suggestions.length === 0 && (
-                        <div className="medicine-suggestion-message">
-                          No matches found. You can enter your own
-                          medicine name.
-                        </div>
-                      )}
-                  </div>
-                )}
+                  {!searchLoading && suggestions.length === 0 && (
+                    <div className="medicine-suggestion-message">
+                      No matches found. You can enter your own medicine name.
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Dosage and frequency */}
             <div className="form-row">
               <div className="form-field">
                 <label htmlFor="med-dosage">Dosage</label>
-
                 <input
                   id="med-dosage"
                   value={form.dosage}
@@ -427,10 +509,7 @@ onClick={() => {
               </div>
 
               <div className="form-field">
-                <label htmlFor="med-frequency">
-                  Frequency
-                </label>
-
+                <label htmlFor="med-frequency">Frequency</label>
                 <select
                   id="med-frequency"
                   value={form.frequency}
@@ -443,7 +522,6 @@ onClick={() => {
                   required
                 >
                   <option value="">Select frequency</option>
-
                   {FREQUENCIES.map((frequency) => (
                     <option key={frequency} value={frequency}>
                       {frequency}
@@ -458,7 +536,6 @@ onClick={() => {
               <label htmlFor="med-instructions">
                 Instructions (optional)
               </label>
-
               <textarea
                 id="med-instructions"
                 rows={2}
@@ -477,7 +554,6 @@ onClick={() => {
             <div className="form-row">
               <div className="form-field">
                 <label htmlFor="med-start">Start date</label>
-
                 <input
                   id="med-start"
                   type="date"
@@ -494,10 +570,7 @@ onClick={() => {
               </div>
 
               <div className="form-field">
-                <label htmlFor="med-end">
-                  End date (optional)
-                </label>
-
+                <label htmlFor="med-end">End date (optional)</label>
                 <input
                   id="med-end"
                   type="date"
@@ -544,8 +617,8 @@ onClick={() => {
               {submitting
                 ? "Saving..."
                 : editingId !== null
-                ? "Save Changes"
-                : "Add Medicine"}
+                  ? "Save Changes"
+                  : "Add Medicine"}
             </button>
           </div>
         </Modal>

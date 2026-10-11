@@ -8,6 +8,8 @@ export interface Reminder {
   reminder_time: string; // "08:00"
   status: "active" | "inactive";
   dosage?: string;
+  frequency?: string;
+  day_of_week?: number | null;
 }
 
 interface ReminderCardProps {
