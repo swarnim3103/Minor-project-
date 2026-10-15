@@ -7,12 +7,14 @@ export interface SummaryMedication {
   timing: string | null;
   duration: string | null;
   notes: string | null;
+  confidence?: "high" | "medium" | "low" | null;
 }
 
 export interface ParsedSummary {
   medications: SummaryMedication[];
   other_instructions: string[];
   unclear: boolean;
+  legibility?: "clear" | "partly_legible" | "hard_to_read" | null;
 }
 
 export function parseSummary(raw: string | null): ParsedSummary | null {
@@ -26,6 +28,7 @@ export function parseSummary(raw: string | null): ParsedSummary | null {
           ? parsed.other_instructions
           : [],
         unclear: Boolean(parsed.unclear),
+        legibility: parsed.legibility ?? null,
       };
     }
     return null;
@@ -48,6 +51,33 @@ export function summaryPreview(p: Prescription): string | null {
 
 const mutedText = { color: "var(--color-text-muted)" } as const;
 
+function legibilityWarning(level: ParsedSummary["legibility"]): string | null {
+  if (level === "hard_to_read") {
+    return "This prescription was hard to read. Some details may be missing or wrong, so please check them against the original.";
+  }
+  if (level === "partly_legible") {
+    return "Some of this handwriting was unclear. Please check the details against the original.";
+  }
+  return null;
+}
+
+function ConfidenceBadge({ level }: { level?: string | null }) {
+  if (level !== "low" && level !== "medium") return null;
+  return (
+    <span
+      style={{
+        fontSize: 11.5,
+        padding: "2px 8px",
+        borderRadius: 6,
+        background: "#fff4e0",
+        color: "#9a5b00",
+      }}
+    >
+      {level === "low" ? "Unsure - please verify" : "Double-check"}
+    </span>
+  );
+}
+
 function Detail({ label, value }: { label: string; value: string | null }) {
   if (!value) return null;
   return (
@@ -62,7 +92,8 @@ function SummaryView({ prescription }: { prescription: Prescription }) {
   if (prescription.ai_summary_status !== "completed" || !prescription.ai_summary) {
     return (
       <p style={{ ...mutedText, fontStyle: "italic" }}>
-        A summary could not be generated for this prescription.
+        A summary could not be generated for this prescription. You can add one manually
+        or try the AI again.
       </p>
     );
   }
@@ -80,8 +111,32 @@ function SummaryView({ prescription }: { prescription: Prescription }) {
     );
   }
 
+  const warning = legibilityWarning(summary.legibility);
+
+  if (summary.medications.length === 0 && summary.other_instructions.length === 0) {
+    return (
+      <p style={{ ...mutedText, fontStyle: "italic" }}>
+        No medicines or instructions could be read from this prescription.
+      </p>
+    );
+  }
+
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {warning && (
+        <div
+          style={{
+            background: "#fff4e0",
+            color: "#9a5b00",
+            padding: "8px 12px",
+            borderRadius: 8,
+            fontSize: 13,
+          }}
+        >
+          {warning}
+        </div>
+      )}
+
       {summary.medications.length > 0 && (
         <div>
           <p style={{ fontWeight: 700, fontSize: 12, letterSpacing: 0.5, ...mutedText, marginBottom: 8 }}>
@@ -112,6 +167,7 @@ function SummaryView({ prescription }: { prescription: Prescription }) {
                       {med.dosage}
                     </span>
                   )}
+                  <ConfidenceBadge level={med.confidence} />
                 </div>
                 <Detail label="How often" value={med.frequency} />
                 <Detail label="When" value={med.timing} />

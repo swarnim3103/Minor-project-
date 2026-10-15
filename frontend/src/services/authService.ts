@@ -519,6 +519,7 @@ export interface Prescription {
   original_filename: string;
   ai_summary: string | null;
   ai_summary_status: "completed" | "failed" | null;
+  summary_edited: boolean;
 }
 
 export async function getPrescriptions(): Promise<Prescription[]> {
@@ -587,6 +588,72 @@ export async function deletePrescription(
 
   if (!response.ok) {
     throw new Error(data.error || "Failed to delete prescription");
+  }
+
+  return data;
+}
+export interface SummaryPayload {
+  medications: {
+    name: string;
+    dosage: string | null;
+    frequency: string | null;
+    timing: string | null;
+    duration: string | null;
+    notes: string | null;
+  }[];
+  other_instructions: string[];
+}
+
+export interface SummaryUpdateResult {
+  message: string;
+  ai_summary: string;
+  ai_summary_status: "completed";
+  summary_edited: boolean;
+}
+
+export async function updatePrescriptionSummary(
+  id: number,
+  summary: SummaryPayload
+): Promise<SummaryUpdateResult> {
+  const token = localStorage.getItem("token");
+
+  const response = await fetch(`${API_URL}/prescriptions/${id}/summary`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(summary),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to save summary");
+  }
+
+  return data;
+}
+
+export async function regeneratePrescriptionSummary(
+  id: number,
+  overwrite = false
+): Promise<SummaryUpdateResult> {
+  const token = localStorage.getItem("token");
+
+  const response = await fetch(`${API_URL}/prescriptions/${id}/regenerate-summary`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ overwrite }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Failed to regenerate summary");
   }
 
   return data;

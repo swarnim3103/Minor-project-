@@ -7,11 +7,15 @@ import SummaryView, { summaryPreview, parseSummary } from "../components/Summary
 import AddToMedicinesModal from "../components/AddToMedicinesModal";
 import "../styles/shared.css";
 import "./Prescriptions.css";
+import SummaryEditor from "../components/SummaryEditor";
 import {
   getPrescriptions,
   uploadPrescription,
   deletePrescription,
+  updatePrescriptionSummary,
+  regeneratePrescriptionSummary,
   type Prescription,
+  type SummaryPayload,
 } from "../services/authService";
 
 const typeLabels: Record<string, string> = {
@@ -24,6 +28,15 @@ function canAddToMedicines(p: Prescription) {
   if (p.ai_summary_status !== "completed") return false;
   const parsed = parseSummary(p.ai_summary);
   return !!parsed && !parsed.unclear && parsed.medications.length > 0;
+}
+function hasSummary(p: Prescription) {
+  return p.ai_summary_status === "completed" && !!p.ai_summary;
+}
+
+// Old prescriptions stored plain text instead of JSON
+function getLegacyText(p: Prescription) {
+  if (!p.ai_summary) return null;
+  return parseSummary(p.ai_summary) ? null : p.ai_summary;
 }
 
 function formatDate(dateStr: string) {
@@ -53,6 +66,10 @@ function Prescriptions() {
   const [selectedPrescription, setSelectedPrescription] = useState<Prescription | null>(null);
   const [addingFrom, setAddingFrom] = useState<Prescription | null>(null);
   const [notice, setNotice] = useState("");
+  const [editingSummary, setEditingSummary] = useState(false);
+const [savingSummary, setSavingSummary] = useState(false);
+const [regenerating, setRegenerating] = useState(false);
+const [summaryError, setSummaryError] = useState("");
   useEffect(() => {
     loadPrescriptions();
   }, []);
@@ -156,6 +173,71 @@ function Prescriptions() {
       setUploading(false);
     }
   }
+  function openDetail(p: Prescription) {
+  setSelectedPrescription(p);
+  setEditingSummary(false);
+  setSummaryError("");
+}
+
+function closeDetail() {
+  setSelectedPrescription(null);
+  setEditingSummary(false);
+  setSummaryError("");
+}
+
+// Keeps the card list and the open detail modal in sync after a summary change
+function applyPrescriptionPatch(id: number, patch: Partial<Prescription>) {
+  setPrescriptions((prev) => prev.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+  setSelectedPrescription((prev) => (prev && prev.id === id ? { ...prev, ...patch } : prev));
+}
+
+async function handleSaveSummary(payload: SummaryPayload) {
+  if (!selectedPrescription) return;
+
+  setSavingSummary(true);
+  setSummaryError("");
+
+  try {
+    const res = await updatePrescriptionSummary(selectedPrescription.id, payload);
+    applyPrescriptionPatch(selectedPrescription.id, {
+      ai_summary: res.ai_summary,
+      ai_summary_status: res.ai_summary_status,
+      summary_edited: res.summary_edited,
+    });
+    setEditingSummary(false);
+  } catch (err) {
+    setSummaryError(err instanceof Error ? err.message : "Failed to save summary.");
+  } finally {
+    setSavingSummary(false);
+  }
+}
+
+async function handleRegenerate() {
+  if (!selectedPrescription) return;
+
+  if (hasSummary(selectedPrescription)) {
+    const message = selectedPrescription.summary_edited
+      ? "This will replace your edited summary with a fresh AI reading. Continue?"
+      : "Re-read this prescription with AI? The current summary will be replaced.";
+    if (!window.confirm(message)) return;
+  }
+
+  setRegenerating(true);
+  setSummaryError("");
+
+  try {
+    const res = await regeneratePrescriptionSummary(selectedPrescription.id, true);
+    applyPrescriptionPatch(selectedPrescription.id, {
+      ai_summary: res.ai_summary,
+      ai_summary_status: res.ai_summary_status,
+      summary_edited: res.summary_edited,
+    });
+  } catch (err) {
+    setSummaryError(err instanceof Error ? err.message : "Failed to regenerate summary.");
+  } finally {
+    setRegenerating(false);
+  }
+}
 
   return (
     <div>
@@ -200,7 +282,7 @@ function Prescriptions() {
             <div
               className="prescription-card"
               key={p.id}
-              onClick={() => setSelectedPrescription(p)}
+              onClick={() => openDetail(p)}
               style={{ cursor: "pointer", flexDirection: "column", alignItems: "stretch" }}
             >
               <div style={{ display: "flex", gap: 14 }}>
@@ -323,42 +405,106 @@ function Prescriptions() {
         </Modal>
       )}
 
-      {selectedPrescription && (
-        <Modal title={selectedPrescription.doctor_name} onClose={() => setSelectedPrescription(null)}>
+        {selectedPrescription && (
+        <Modal title={selectedPrescription.doctor_name} onClose={closeDetail}>
           <p style={{ color: "var(--color-text-muted)", marginBottom: 12 }}>
             {formatDate(selectedPrescription.prescription_date)} &middot;{" "}
             {typeLabels[selectedPrescription.prescription_type]}
           </p>
 
           <div style={{ marginBottom: 16 }}>
-            <SummaryView prescription={selectedPrescription} />
-          </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8 }}>
+              <h4 style={{ margin: 0 }}>Summary</h4>
+              {selectedPrescription.summary_edited && (
+                <span
+                  style={{
+                    fontSize: 11.5,
+                    padding: "2px 8px",
+                    borderRadius: 6,
+                    background: "var(--color-accent-bg)",
+                    color: "var(--color-primary)",
+                  }}
+                >
+                  Edited by you
+                </span>
+              )}
+            </div>
 
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <a
-              href={`http://localhost:5000${selectedPrescription.file_url}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-secondary"
-              style={{ display: "inline-flex" }}
-            >
-              View Prescription
-            </a>
+            {summaryError && (
+              <div className="error-banner" style={{ marginBottom: 10 }}>
+                {summaryError}
+              </div>
+            )}
 
-            {canAddToMedicines(selectedPrescription) && (
-              <button
-                className="btn btn-primary"
-                onClick={() => {
-                  setAddingFrom(selectedPrescription);
-                  setSelectedPrescription(null);
+            {editingSummary ? (
+              <SummaryEditor
+                initial={parseSummary(selectedPrescription.ai_summary)}
+                legacyText={getLegacyText(selectedPrescription)}
+                saving={savingSummary}
+                onSave={handleSaveSummary}
+                onCancel={() => {
+                  setEditingSummary(false);
+                  setSummaryError("");
                 }}
-              >
-                Add to Medicines
-              </button>
+              />
+            ) : (
+              <SummaryView prescription={selectedPrescription} />
             )}
           </div>
+
+          {!editingSummary && (
+            <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+              <button
+                className="btn btn-secondary"
+                disabled={regenerating}
+                onClick={() => {
+                  setSummaryError("");
+                  setEditingSummary(true);
+                }}
+              >
+                {hasSummary(selectedPrescription) ? "Edit Summary" : "Add Summary Manually"}
+              </button>
+
+              <button
+                className="btn btn-secondary"
+                disabled={regenerating}
+                onClick={handleRegenerate}
+              >
+                {regenerating
+                  ? "Reading..."
+                  : hasSummary(selectedPrescription)
+                  ? "Re-read with AI"
+                  : "Generate with AI"}
+              </button>
+
+              <a
+                href={`http://localhost:5000${selectedPrescription.file_url}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn btn-secondary"
+                style={{ display: "inline-flex" }}
+              >
+                View Prescription
+              </a>
+
+              {canAddToMedicines(selectedPrescription) && (
+                <button
+                  className="btn btn-primary"
+                  disabled={regenerating}
+                  onClick={() => {
+                    setAddingFrom(selectedPrescription);
+                    closeDetail();
+                  }}
+                >
+                  Add to Medicines
+                </button>
+              )}
+            </div>
+          )}
         </Modal>
       )}
+
+      {/* Must live OUTSIDE the detail modal above */}
       {addingFrom && (
         <AddToMedicinesModal
           prescription={addingFrom}
