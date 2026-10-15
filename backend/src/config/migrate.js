@@ -265,7 +265,22 @@ if (!existingReminderColumns.includes("day_of_week")) {
       )
     `);
 
+// 6. Chat messages (so history survives reloads)
+await pool.query(`
+  CREATE TABLE IF NOT EXISTS chat_messages (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    role ENUM('user', 'assistant') NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 
+    INDEX idx_chat_user_time (user_id, id),
+    CONSTRAINT fk_chat_user
+      FOREIGN KEY (user_id) REFERENCES users(id)
+      ON DELETE CASCADE
+  )
+`);
+console.log('Chat messages table created/checked.');
 
     console.log('Reminder logs table created/checked.');
 

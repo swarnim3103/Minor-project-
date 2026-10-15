@@ -4,11 +4,17 @@ const { buildMedicalPrompt } = require("./prompt");
 const { generateAnswer } = require("./gemini");
 const { generateVerification } = require("./groq");
 const { verifyAnswers } = require("./consensus");
-
+const pool = require("../db");
+const { getUserContext } = require("./userContext");
+const { buildMedicalPrompt } = require("./prompt");
+const userId = req.user.id;
 const CONSENSUS_THRESHOLD = Number(
   process.env.CONSENSUS_THRESHOLD || 0.55
 );
-
+await pool.query(
+  'INSERT INTO chat_messages (user_id, role, content) VALUES (?, "user", ?)',
+  [userId, question]
+);
 function isGreeting(message) {
   const greetings = [
     "hi",
