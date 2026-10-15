@@ -1,3 +1,4 @@
+
 import { EditIcon, TrashIcon, PillIcon } from "./icons";
 import "./MedicineCard.css";
 
@@ -15,9 +16,15 @@ interface MedicineCardProps {
   medicine: Medicine;
   onEdit?: (medicine: Medicine) => void;
   onDelete?: (id: number) => void;
+  reminderStatus?: "missing" | "incomplete" | null;
 }
 
-function MedicineCard({ medicine, onEdit, onDelete }: MedicineCardProps) {
+function MedicineCard({
+  medicine,
+  onEdit,
+  onDelete,
+  reminderStatus,
+}: MedicineCardProps) {
   return (
     <div className="medicine-card">
       <div className="medicine-card-icon">
@@ -26,16 +33,35 @@ function MedicineCard({ medicine, onEdit, onDelete }: MedicineCardProps) {
 
       <div className="medicine-card-body">
         <h3>{medicine.name}</h3>
+
         <p className="medicine-card-dosage">
           {medicine.dosage} &middot; {medicine.frequency}
         </p>
+
         {medicine.instructions && (
-          <p className="medicine-card-instructions">{medicine.instructions}</p>
+          <p className="medicine-card-instructions">
+            {medicine.instructions}
+          </p>
         )}
+
         <p className="medicine-card-dates">
           Since {medicine.start_date}
-          {medicine.end_date ? ` · until ${medicine.end_date}` : ""}
+          {medicine.end_date
+            ? ` · until ${medicine.end_date}`
+            : ""}
         </p>
+
+        {reminderStatus && (
+          <p
+            className={`medicine-reminder-warning medicine-reminder-${reminderStatus}`}
+            role="status"
+          >
+            <span aria-hidden="true">!</span>
+            {reminderStatus === "missing"
+              ? "Reminder not set"
+              : "Reminder schedule incomplete"}
+          </p>
+        )}
       </div>
 
       <div className="medicine-card-actions">
@@ -46,6 +72,7 @@ function MedicineCard({ medicine, onEdit, onDelete }: MedicineCardProps) {
         >
           <EditIcon width={16} height={16} />
         </button>
+
         <button
           className="medicine-card-btn medicine-card-btn-danger"
           onClick={() => onDelete?.(medicine.id)}

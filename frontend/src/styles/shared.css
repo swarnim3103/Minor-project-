@@ -195,3 +195,44 @@
   color: #6b7280;
   font-size: 13px;
 }
+
+.medicine-suggestion {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  text-align: left;
+}
+
+.medicine-suggestion-name {
+  font-weight: 600;
+}
+
+.medicine-suggestion-composition {
+  font-size: 12px;
+  color: #6b7280;
+  white-space: normal;
+  line-height: 1.4;
+}
+
+
+/* Error messages */
+.error-banner {
+  margin: 12px 0;
+  padding: 12px 14px;
+  border: 1px solid #f2b8b5;
+  border-radius: 8px;
+  background: #fff1f0;
+  color: #b42318;
+  font-size: 13px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.modal-error {
+  position: relative;
+  z-index: 1;
+  margin-top: 0;
+  margin-bottom: 18px;
+}

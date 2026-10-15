@@ -29,8 +29,9 @@ let aiSummary = null;
 let aiSummaryStatus = 'failed';
 try {
   console.log('[prescription.upload] Calling AI summary generation...');
-  aiSummary = await generatePrescriptionSummary(req.file.path);
-  console.log('[prescription.upload] AI summary result:', aiSummary);
+  const summaryData = await generatePrescriptionSummary(req.file.path);
+  aiSummary = JSON.stringify(summaryData);
+  console.log('[prescription.upload] AI summary result:', summaryData);
   aiSummaryStatus = 'completed';
 } catch (aiErr) {
   console.error('[prescription.upload] AI summary generation failed:', aiErr.message);
